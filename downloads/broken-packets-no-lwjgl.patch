@@ -1,0 +1,62 @@
+diff --git a/mcp940/src/minecraft/net/minecraft/client/Minecraft.java b/mcp940/src/minecraft/net/minecraft/client/Minecraft.java
+index bc237ec..db4c764 100644
+--- a/mcp940/src/minecraft/net/minecraft/client/Minecraft.java
++++ b/mcp940/src/minecraft/net/minecraft/client/Minecraft.java
+@@ -3263,7 +3263,12 @@ public class Minecraft implements IThreadListener, ISnooperInfo
+      */
+     public static long getSystemTime()
+     {
+-        return Sys.getTime() * 1000L / Sys.getTimerResolution();
++        // calls LWJGL
++        //return Sys.getTime() * 1000L / Sys.getTimerResolution();
++
++        // http://ninjacave.com/lwjglbasics4
++        //
++        return System.nanoTime() / 1000000L;
+     }
+ 
+     /**
+diff --git a/mcp940/src/minecraft/net/minecraft/network/NetworkManager.java b/mcp940/src/minecraft/net/minecraft/network/NetworkManager.java
+index cbb0353..3e26c05 100644
+--- a/mcp940/src/minecraft/net/minecraft/network/NetworkManager.java
++++ b/mcp940/src/minecraft/net/minecraft/network/NetworkManager.java
+@@ -94,6 +94,10 @@ public class NetworkManager extends SimpleChannelInboundHandler<Packet<?>>
+         this.direction = packetDirection;
+     }
+ 
++    public EnumPacketDirection getPacketDirection() {
++        return this.direction;
++    }
++
+     public void channelActive(ChannelHandlerContext p_channelActive_1_) throws Exception
+     {
+         super.channelActive(p_channelActive_1_);
+diff --git a/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnMob.java b/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnMob.java
+index ff17e29..8634380 100644
+--- a/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnMob.java
++++ b/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnMob.java
+@@ -121,7 +121,10 @@ public class SPacketSpawnMob implements Packet<INetHandlerPlayClient>
+         buf.writeShort(this.velocityX);
+         buf.writeShort(this.velocityY);
+         buf.writeShort(this.velocityZ);
+-        this.dataManager.writeEntries(buf);
++        if (null != this.dataManager)//PLG
++            this.dataManager.writeEntries(buf);
++        if (null != this.dataManagerEntries) //PLG
++            EntityDataManager.writeEntries(this.dataManagerEntries, buf); //PLG
+     }
+ 
+     /**
+diff --git a/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnPlayer.java b/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnPlayer.java
+index 7dacfb2..9f4dafc 100644
+--- a/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnPlayer.java
++++ b/mcp940/src/minecraft/net/minecraft/network/play/server/SPacketSpawnPlayer.java
+@@ -65,6 +65,8 @@ public class SPacketSpawnPlayer implements Packet<INetHandlerPlayClient>
+         buf.writeDouble(this.z);
+         buf.writeByte(this.yaw);
+         buf.writeByte(this.pitch);
++        if (null == this.watcher) //PLG
++            this.watcher= new EntityDataManager(null);
+         this.watcher.writeEntries(buf);
+     }
+ 
