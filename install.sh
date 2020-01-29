@@ -200,7 +200,7 @@ curl -f -o jars/minecraft_server.1.12.jar https://launcher.mojang.com/v1/objects
 
 echo == Downloading MinecraftDiscovery.py.patch ==
 curl -f -o MinecraftDiscovery.py.patch https://gist.githubusercontent.com/PLG/6196bc01810c2ade88f0843253b56097/raw/1bd38308838f793a484722aa46eae503328bb50f/MinecraftDiscovery.py.patch || error_exit
-# this will fail, if it is run in a directory that is already part of a git repo; reported to git community
+git status > /dev/null 2>&1 && error_msg "Target directory can not be part of a git repo; patching will fail" # reported to git community
 echo Patching ...
 git apply --stat --apply --reject MinecraftDiscovery.py.patch || error_exit
 
