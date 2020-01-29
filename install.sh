@@ -13,8 +13,7 @@ pause() {
 }
 
 usage() {
-	#echo "usage: $0 [[[-d directory ] [-i]] | [-h]]"
-	echo "usage: $0 [-d|--directory directory ] [-u|--upgrade]"
+	echo "usage: $0 [-d|--directory directory] [-u|--upgrade]"
 }
 
 error_msg() {
@@ -82,16 +81,17 @@ if [[ $UPGRADE == 1 ]]; then
 
 	exit 0;
 fi
-	
+
 if [ -d $MITM_DIR/$MCP_DIR/bin/minecraft ]; then
 	read -n 1 -p "Target directory [$MITM_DIR] exists, overwrite? [N/y] " INPUT || error_exit
 	RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
 	if [[ "$RES" != "y" ]]; then
-		echo
+		[ "$RES" == "" ] || echo
 		echo "Abort."
 		exit 0
 	fi
 fi
+echo
 echo Setting up working directory: [$MITM_DIR] ...
 mkdir -p $MITM_DIR || error_msg "failed to make target directory: [$MITM_DIR]"
 cd $MITM_DIR/ || error_exit
@@ -111,6 +111,8 @@ REQ=autoconf
 
 #--------------------------------------------------------------------------------------------------------------------------------
 # jzmq
+
+#TODO host:/usr/local/opt/zmq$ [ -f include/zmq.h ] || echo "NO"
 
 if [[ $ARCH = "macOS" ]]; then
 REQ=zmq # ./configure will fail if not installed
