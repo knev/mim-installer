@@ -134,7 +134,7 @@ pushd $JZMQ/jzmq-jni/ > /dev/null || error_exit
 mv configure.in configure.ac || error_exit
 ./autogen.sh || error_exit
 ./configure || error_exit
-make
+make || error_exit
 cp -r src/main/c++/.libs ../../libs || error_exit
 popd > /dev/null
 #cleanup rm -rf $JZMQ
@@ -166,7 +166,7 @@ if [[ $ARCH == "Linux" ]]; then
 	[ -f $ASTYLE ] || curl -f -o $ASTYLE -L https://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/$ASTYLE/download || error_exit
 	tar -xzf $ASTYLE || error_exit
 	pushd astyle/build/gcc > /dev/null || error_exit
-	make
+	make || error_exit
 	cp bin/astyle ../../../mcp940/runtime/bin/. || error_exit
 	popd > /dev/null
 	sed -i 's/^AStyle_linux  = astyle/AStyle_linux	= \%\(DirRuntime\)s\/bin\/astyle/g' mcp940/conf/mcp.cfg
@@ -178,7 +178,7 @@ elif [[ $ARCH == "macOS" ]]; then
 	[ -f $ASTYLE ] || curl -f -o $ASTYLE -L https://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/$ASTYLE/download || error_exit
 	tar -xzf $ASTYLE || error_exit
 	pushd astyle/build/mac > /dev/null || error_exit
-	make
+	make || error_exit
 	cp bin/astyle ../../../mcp940/runtime/bin/astyle-osx || error_exit
 	popd > /dev/null
 	rm -rf astyle
