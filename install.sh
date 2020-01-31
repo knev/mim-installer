@@ -28,6 +28,28 @@ error_exit() {
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
+INST_VERSION=1
+
+NET_INST_URL="INSTALLER_URL"
+NET_INST_VERSION=`curl -sf --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
+NET_DOWNLOAD="DOWNLOAD LOCATION"
+
+if [ "$NET_INST_VERSION" == "" ]; then
+	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
+	read -n 1 -p "Please check manually for a newer version, continue? [N/y] " INPUT || error_exit
+	RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
+	if [[ "$RES" != "y" ]]; then
+		[ "$RES" == "" ] || echo
+		echo "Abort."
+		exit 0
+	fi
+	echo
+else
+	[ "$INST_VERSION" == "$NET_INST_VERSION" ] || error_msg "This installer is outdated [v$INST_VERSION]. Please obtain the newer [v$NET_INST_VERSION]."
+fi
+
+#--------------------------------------------------------------------------------------------------------------------------------
+
 # https://stackoverflow.com/questions/394230/how-to-detect-the-os-from-a-bash-script
 #if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
@@ -68,7 +90,7 @@ while [ "$1" != "" ]; do
 done
 
 #--------------------------------------------------------------------------------------------------------------------------------
-# $MITM_DIR, pre-req
+# Upgrade?
 
 REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
@@ -77,10 +99,41 @@ REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ
 #TODO which java versions are supported?
 
 if [[ $UPGRADE == 1 ]]; then
-	echo "UPGRADE"
+	[ -d $MITM_DIR/$MCP_DIR/bin/minecraft ] || error_msg "Target directory [$MITM_DIR] not found"
+	cd $MITM_DIR/ || error_exit
+
+
+	for SIDE in "down" "up"
+	do
+		if [ -f ./mitm-$SIDE'stream.jar' ]; then
+			INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/MiTM-of-minecraft: \(.*\)$/\1/'`
+			INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
+			INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
+
+			NET_VERSION=`curl -sf $NET_DOWNLOAD/artifacts/mitm_$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
+			NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
+			NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
+
+			#echo $INST_VERSION - $NET_VERSION - $INST_MAJOR $INST_MINOR - $NET_MAJOR $NET_MINOR
+			#if [ "$INST_MAJOR" -lt "$NET_MAJOR" ]; then
+			if [ "$INST_VERSION" != "$NET_VERSION" ]; then
+				echo "== Downloading Man in the Middle ["$SIDE"stream] component =="
+				curl -f -o ./mitm-$SIDE'stream.jar.tmp' $NET_DOWNLOAD/artifacts/mitm_$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
+				rm ./mitm-$SIDE'stream.jar' || error_exit
+				mv ./mitm-$SIDE'stream.jar.tmp' ./mitm-$SIDE'stream.jar' || continue
+				echo $SIDE"stream: "`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version`
+			else
+				INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/MiTM-of-minecraft: \(.*\)$/\1/'`
+				echo $SIDE"stream: ["$INST_VERSION"]; Up to date!"
+			fi
+		fi
+	done
 
 	exit 0;
 fi
+
+#--------------------------------------------------------------------------------------------------------------------------------
+# $MITM_DIR, pre-req
 
 if [ -d $MITM_DIR/$MCP_DIR/bin/minecraft ]; then
 	read -n 1 -p "Target directory [$MITM_DIR] exists, overwrite? [N/y] " INPUT || error_exit
@@ -134,6 +187,9 @@ else
 fi
 pushd $JZMQ/jzmq-jni/ > /dev/null || error_exit
 mv configure.in configure.ac || error_exit
+
+echo "SUCCESS!"; exit 0
+
 ./autogen.sh || error_exit
 ./configure || error_exit
 make || error_exit
@@ -231,12 +287,12 @@ cp -r src/minecraft_server/net/minecraft/server/dedicated src/minecraft/net/mine
 cp -r src/minecraft_server/net/minecraft/server/gui src/minecraft/net/minecraft/server/. || error_exit
 
 echo == Downloading merge-client-server.patch ==
-curl -f -o ./merge-client-server-astyle.patch https://www.mitm.se/minecraft/merge-client-server-astyle.patch || error_exit
+curl -f -o ./merge-client-server-astyle.patch $NET_DOWNLOAD/merge-client-server-astyle.patch || error_exit
 echo Patching ...
 git apply --stat --ignore-space-change -p2 --apply --reject merge-client-server-astyle.patch || error_exit
 
 echo == Downloading /broken-packets-no-lwjgl.patch ==
-curl -f -o ./broken-packets-no-lwjgl.patch https://www.mitm.se/minecraft/broken-packets-no-lwjgl.patch || error_exit
+curl -f -o ./broken-packets-no-lwjgl.patch $NET_DOWNLOAD/broken-packets-no-lwjgl.patch || error_exit
 echo Patching ...
 git apply --stat --ignore-space-change -p2 --apply --reject ./broken-packets-no-lwjgl.patch || error_exit
 
@@ -251,7 +307,7 @@ cd ..
 # MITM components
 
 echo == Downloading Man in the Middle component ==
-curl -f -o ./mitm-$SIDE'stream.jar' https://www.mitm.se/minecraft/mitm-$SIDE'stream.jar' || error_exit
+curl -f -o ./mitm-$SIDE'stream.jar' $NET_DOWNLOAD/artifacts/mitm_$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
 
 echo == Generating classpath \& run script ==
 # https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
@@ -263,10 +319,8 @@ echo 'MCPLIBS=$MCP/jars/libraries'$'\n' >> ./$SIDE'stream.sh'
 
 echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiTM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiTM/mitm-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
 if [[ $SIDE = "down" ]]; then
-	#curl -f -o ./mitm-downstream.jar https://www.mitm.se/minecraft/mitm-downstream.jar || error_exit
 	echo 'se.mitm.server.DedicatedServerProxy' >> ./$SIDE'stream.sh'
 else
-	#curl -f -o ./mitm-upstream.jar https://www.mitm.se/minecraft/mitm-upstream.jar || error_exit
 	echo 'se.mitm.client.MinecraftClientProxy' >> ./$SIDE'stream.sh'
 fi
 
