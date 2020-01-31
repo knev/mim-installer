@@ -156,7 +156,7 @@ REQ=make; which $REQ > /dev/null || error_msg "This install script requires [$RE
 
 REQ=libtool # (a mac version is preinstalled)
 if [[ $ARCH == macOS ]]; then
-which glibtool || error_msg "This install script requires [libtool] to be installed"
+which glibtool > /dev/null || error_msg "This install script requires [libtool] to be installed"
 fi
 
 REQ=pkg-config
