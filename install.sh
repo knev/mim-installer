@@ -30,7 +30,7 @@ error_exit() {
 
 INST_VERSION=1
 
-NET_INST_URL="INSTALLER_URL"
+NET_INST_URL=https://raw.githubusercontent.com/knev/mitm-installer/master/install.sh
 NET_INST_VERSION=`curl -sf --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
 NET_DOWNLOAD="DOWNLOAD LOCATION"
 
@@ -187,9 +187,6 @@ else
 fi
 pushd $JZMQ/jzmq-jni/ > /dev/null || error_exit
 mv configure.in configure.ac || error_exit
-
-echo "SUCCESS!"; exit 0
-
 ./autogen.sh || error_exit
 ./configure || error_exit
 make || error_exit
@@ -245,6 +242,10 @@ else
 	#TODO https://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/AStyle_2.05.1_windows.zip/download
 	echo Do nothing ...
 fi
+
+
+#TODO REMOVE!
+echo "SUCCESS!"; exit 0
 
 #--------------------------------------------------------------------------------------------------------------------------------
 # prep MCP src
