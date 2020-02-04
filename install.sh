@@ -30,9 +30,9 @@ error_exit() {
 
 INST_VERSION=1
 
-NET_INST_URL=https://raw.githubusercontent.com/knev/mitm-installer/master/install.sh
-NET_INST_VERSION=`curl -sf --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
-NET_DOWNLOAD="DOWNLOAD LOCATION"
+NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
+NET_INST_VERSION=`curl -sfL --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
+NET_DOWNLOAD="https://domain.local"
 
 if [ "$NET_INST_VERSION" == "" ]; then
 	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
@@ -67,7 +67,7 @@ esac
 
 # http://linuxcommand.org/lc3_wss0120.php
 #
-MITM_DIR=MiTM-of-minecraft
+MITM_DIR=MiM
 MCP_DIR=mcp940
 UPGRADE=0
 SIDE="down"
@@ -110,7 +110,7 @@ if [[ $UPGRADE == 1 ]]; then
 			INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
 			INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
 
-			NET_VERSION=`curl -sf $NET_DOWNLOAD/artifacts/mitm_$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
+			NET_VERSION=`curl -sfL $NET_DOWNLOAD/mitm-$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
 			NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
 			NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
 
@@ -118,7 +118,7 @@ if [[ $UPGRADE == 1 ]]; then
 			#if [ "$INST_MAJOR" -lt "$NET_MAJOR" ]; then
 			if [ "$INST_VERSION" != "$NET_VERSION" ]; then
 				echo "== Downloading Man in the Middle ["$SIDE"stream] component =="
-				curl -f -o ./mitm-$SIDE'stream.jar.tmp' $NET_DOWNLOAD/artifacts/mitm_$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
+				curl -f -o ./mitm-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
 				rm ./mitm-$SIDE'stream.jar' || error_exit
 				mv ./mitm-$SIDE'stream.jar.tmp' ./mitm-$SIDE'stream.jar' || continue
 				echo $SIDE"stream: "`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version`
@@ -206,7 +206,7 @@ mkdir -p $MCP_DIR || error_msg "failed to make target directory: [$MCP_DIR]"
 if [ -f mcp940.zip ]; then
 	echo "File [mcp940.zip] exists, ... reusing"
 else
-	curl -f -o mcp940.zip http://www.modcoderpack.com/files/mcp940.zip || error_exit
+	curl -f -o mcp940.zip -L http://www.modcoderpack.com/files/mcp940.zip || error_exit
 fi
 unzip -qo -d $MCP_DIR/. mcp940.zip || error_exit
 #cleanup rm mcp940.zip
@@ -243,20 +243,16 @@ else
 	echo Do nothing ...
 fi
 
-
-#TODO REMOVE!
-echo "SUCCESS!"; exit 0
-
 #--------------------------------------------------------------------------------------------------------------------------------
 # prep MCP src
 
 cd mcp940 || error_exit
 
 echo == Downloading Minecraft Server v1.12 == # https://mcversions.net/
-curl -f -o jars/minecraft_server.1.12.jar https://launcher.mojang.com/v1/objects/8494e844e911ea0d63878f64da9dcc21f53a3463/server.jar || error_exit
+curl -f -o jars/minecraft_server.1.12.jar -L https://launcher.mojang.com/v1/objects/8494e844e911ea0d63878f64da9dcc21f53a3463/server.jar || error_exit
 
 echo == Downloading MinecraftDiscovery.py.patch ==
-curl -f -o MinecraftDiscovery.py.patch https://gist.githubusercontent.com/PLG/6196bc01810c2ade88f0843253b56097/raw/1bd38308838f793a484722aa46eae503328bb50f/MinecraftDiscovery.py.patch || error_exit
+curl -f -o MinecraftDiscovery.py.patch -L https://gist.githubusercontent.com/PLG/6196bc01810c2ade88f0843253b56097/raw/1bd38308838f793a484722aa46eae503328bb50f/MinecraftDiscovery.py.patch || error_exit
 git status > /dev/null 2>&1 && error_msg "Target directory can not be part of a git repo; patching will fail" # reported to git community
 echo Patching ...
 git apply --stat --apply --reject MinecraftDiscovery.py.patch || error_exit
@@ -288,12 +284,12 @@ cp -r src/minecraft_server/net/minecraft/server/dedicated src/minecraft/net/mine
 cp -r src/minecraft_server/net/minecraft/server/gui src/minecraft/net/minecraft/server/. || error_exit
 
 echo == Downloading merge-client-server.patch ==
-curl -f -o ./merge-client-server-astyle.patch $NET_DOWNLOAD/merge-client-server-astyle.patch || error_exit
+curl -f -o ./merge-client-server-astyle.patch -L $NET_DOWNLOAD/merge-client-server-astyle.patch || error_exit
 echo Patching ...
 git apply --stat --ignore-space-change -p2 --apply --reject merge-client-server-astyle.patch || error_exit
 
 echo == Downloading /broken-packets-no-lwjgl.patch ==
-curl -f -o ./broken-packets-no-lwjgl.patch $NET_DOWNLOAD/broken-packets-no-lwjgl.patch || error_exit
+curl -f -o ./broken-packets-no-lwjgl.patch -L $NET_DOWNLOAD/broken-packets-no-lwjgl.patch || error_exit
 echo Patching ...
 git apply --stat --ignore-space-change -p2 --apply --reject ./broken-packets-no-lwjgl.patch || error_exit
 
@@ -308,7 +304,7 @@ cd ..
 # MITM components
 
 echo == Downloading Man in the Middle component ==
-curl -f -o ./mitm-$SIDE'stream.jar' $NET_DOWNLOAD/artifacts/mitm_$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
+curl -f -o ./mitm-$SIDE'stream.jar' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
 
 echo == Generating classpath \& run script ==
 # https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
