@@ -36,10 +36,10 @@ NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok t
 
 if [ "$NET_INST_VERSION" == "" ]; then
 	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
-	read -n 1 -p "Please check manually for a newer version, continue? [N/y] " INPUT || error_exit
+	read -s -n 1 -p "Please check manually for a newer version, continue? [N/y] " INPUT || error_exit
 	RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
 	if [[ "$RES" != "y" ]]; then
-		[ "$RES" == "" ] || echo
+		echo
 		echo "Abort."
 		exit 0
 	fi
@@ -136,16 +136,14 @@ fi
 # $MITM_DIR, pre-req
 
 if [ -d $MITM_DIR/$MCP_DIR/bin/minecraft ]; then
-	read -n 1 -p "Target directory [$MITM_DIR] exists, overwrite? [N/y] " INPUT || error_exit
+	read -s -n 1 -p "Target directory [$MITM_DIR] exists, overwrite? [N/y] " INPUT || error_exit
 	RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
 	if [[ "$RES" != "y" ]]; then
-		[ "$RES" == "" ] || echo
-		echo "Abort."
+		echo $'\n'"Abort."
 		exit 0
 	fi
 fi
-echo
-echo Setting up working directory: [$MITM_DIR] ...
+echo $'\n'"Setting up working directory: [$MITM_DIR] ..."
 mkdir -p $MITM_DIR || error_msg "failed to make target directory: [$MITM_DIR]"
 cd $MITM_DIR/ || error_exit
 
