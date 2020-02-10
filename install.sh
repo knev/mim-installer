@@ -32,7 +32,7 @@ INST_VERSION=1
 
 NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
 NET_INST_VERSION=`curl -sfL --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
-NET_DOWNLOAD="https://domain.local"
+NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
 
 if [ "$NET_INST_VERSION" == "" ]; then
 	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
