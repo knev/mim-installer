@@ -96,7 +96,10 @@ REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$RE
 REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 
-#TODO which java versions are supported?
+#TODO which (other) java versions are supported?
+
+JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^java version \"\(.*\)\"$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
+[ "$JAVA_VERSION" == "1.8" ] || error_msg "only Java JDK version 1.8 is currently supported"
 
 if [[ $UPGRADE == 1 ]]; then
 	[ -d $MITM_DIR/$MCP_DIR/bin/minecraft ] || error_msg "Target directory [$MITM_DIR] not found"
