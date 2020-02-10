@@ -107,19 +107,19 @@ if [[ $UPGRADE == 1 ]]; then
 	do
 		if [ -f ./mitm-$SIDE'stream.jar' ]; then
 			INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/MiTM-of-minecraft: \(.*\)$/\1/'`
-			INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
-			INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
+			#INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
+			#INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
 
 			NET_VERSION=`curl -sfL $NET_DOWNLOAD/mitm-$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
-			NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
-			NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
+			#NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
+			#NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
 
 			#echo $INST_VERSION - $NET_VERSION - $INST_MAJOR $INST_MINOR - $NET_MAJOR $NET_MINOR
 			#if [ "$INST_MAJOR" -lt "$NET_MAJOR" ]; then
 			if [ "$INST_VERSION" != "$NET_VERSION" ]; then
 				echo "== Downloading Man in the Middle ["$SIDE"stream] component =="
-				curl -f -o ./mitm-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
-				rm ./mitm-$SIDE'stream.jar' || error_exit
+				curl -f -o ./mitm-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || continue
+				rm ./mitm-$SIDE'stream.jar' || continue
 				mv ./mitm-$SIDE'stream.jar.tmp' ./mitm-$SIDE'stream.jar' || continue
 				echo $SIDE"stream: "`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version`
 			else
