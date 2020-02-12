@@ -274,6 +274,7 @@ generate_run_script()
 
 	# basically don't have to have to escape anything except for single quotes, which aren't escaped inside single quotes
 	# https://unix.stackexchange.com/questions/187651/how-to-echo-single-quote-when-using-single-quote-to-wrap-special-characters-in
+	# http://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
 	#
 	#INST_VERSION=`java -classpath mitm-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 MiTM-of-minecraft | sed 's/MiTM-of-minecraft: \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
 	#NET_VERSION=`curl -sfL https://mitm.se/mim-install/mitm-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
@@ -281,7 +282,7 @@ generate_run_script()
 	#
 	echo 'INST_VERSION=`java -classpath mitm-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 MiTM-of-minecraft | sed '\''s/MiTM-of-minecraft: \(.*\)$/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
 	echo 'NET_VERSION=`curl -sfL '$NET_DOWNLOAD'/mitm-'$SIDE'stream/Version.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
-	echo '[ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "upstream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh'
+	echo '[ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "'$SIDE'stream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh'
 
 	# #VARIABLES to shorten classpath
 	#
