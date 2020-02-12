@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# https://stackoverflow.com/questions/2188199/how-to-use-double-or-single-brackets-parentheses-curly-braces
+
 # One of two philosophies:
 # 1) install each section; once it is done, don't repeat it.
 # 2) install each section, but clobber existing files to ensure a clean install.
@@ -28,7 +30,7 @@ error_exit() {
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=2
+INST_VERSION=3
 
 NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
 NET_INST_VERSION=`curl -sfL --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
@@ -91,42 +93,6 @@ done
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-upgrade()
-{
-	[ -d $MITM_DIR/$MCP_DIR/bin/minecraft ] || error_msg "Target directory [$MITM_DIR] not found"
-	cd $MITM_DIR/ || error_exit
-
-	for SIDE in "down" "up"
-	do
-		if [ -f ./mitm-$SIDE'stream.jar' ]; then
-			INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/MiTM-of-minecraft: \(.*\)$/\1/'`
-			#INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
-			#INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
-
-			NET_VERSION=`curl -sfL $NET_DOWNLOAD/mitm-$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
-			#NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
-			#NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
-
-			#echo $INST_VERSION - $NET_VERSION - $INST_MAJOR $INST_MINOR - $NET_MAJOR $NET_MINOR
-			#if [ "$INST_MAJOR" -lt "$NET_MAJOR" ]; then
-			if [ "$INST_VERSION" != "$NET_VERSION" ]; then
-				echo "== Downloading Man in the Middle ["$SIDE"stream] component =="
-				curl -f -o ./mitm-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || continue
-				rm ./mitm-$SIDE'stream.jar' || continue
-				mv ./mitm-$SIDE'stream.jar.tmp' ./mitm-$SIDE'stream.jar' || continue
-				echo $SIDE"stream: "`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version`
-			else
-				INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/MiTM-of-minecraft: \(.*\)$/\1/'`
-				echo $SIDE"stream: ["$INST_VERSION"]; Up to date!"
-			fi
-		fi
-	done
-
-	exit 0;
-}
-
-#--------------------------------------------------------------------------------------------------------------------------------
-
 create_working_directory() 
 {
 	if [ -d $MITM_DIR/$MCP_DIR/bin/minecraft ]; then
@@ -174,7 +140,7 @@ compile_jzmq_lib()
 download_mcp()
 {
 	echo == Downloading MCP940 for Minecraft v1.12 ==
-	[ -d $MCP_DIR ] && (rm -rf $MCP_DIR || error_exit)
+	[ -d $MCP_DIR ] && { rm -rf $MCP_DIR || error_exit; }
 	mkdir -p $MCP_DIR || error_msg "failed to make target directory: [$MCP_DIR]"
 	if [ -f mcp940.zip ]; then
 		echo "File [mcp940.zip] exists, ... reusing"
@@ -204,6 +170,7 @@ upgrade_astyle()
 		rm -rf astyle
 
 		rm $ASTYLE
+
 	elif [[ $ARCH == "macOS" ]]; then
 		mv mcp940/runtime/bin/astyle-osx mcp940/runtime/bin/astyle-osx-2.02 || error_exit
 		ASTYLE=astyle_2.05.1_macosx.tar.gz
@@ -215,7 +182,8 @@ upgrade_astyle()
 		popd > /dev/null
 		rm -rf astyle
 
-		rm $STYLE
+		rm $ASTYLE
+
 	else 
 		#TODO https://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/AStyle_2.05.1_windows.zip/download
 		echo Do nothing ...
@@ -285,15 +253,18 @@ prep_mcp()
 
 download_mim() 
 {
-	echo == Downloading Man in the Middle component ==
-	curl -f -o ./mitm-$SIDE'stream.jar' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || error_exit
+	echo "== Downloading Man in the Middle ["$SIDE"stream] component =="
+	[ -f ./mitm-$SIDE'stream.jar' ] && { cp ./mitm-$SIDE'stream.jar' ./mitm-$SIDE'stream.jar~' || return 1; }
+	curl -f -o ./mitm-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || return 1
+	mv ./mitm-$SIDE'stream.jar.tmp' ./mitm-$SIDE'stream.jar' || retun 1
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
 generate_run_script() 
 {
-	echo == Generating classpath \& run script ==
+	echo "== Generating ["$SIDE"stream] run script =="
+	[ -f $SIDE'stream.sh' ] && { cp $SIDE'stream.sh' $SIDE'stream.sh~' || return 1; }
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
 	echo '#!/bin/bash'$'\n' > $SIDE'stream.sh'
 
@@ -303,7 +274,6 @@ generate_run_script()
 
 	# basically don't have to have to escape anything except for single quotes, which aren't escaped inside single quotes
 	# https://unix.stackexchange.com/questions/187651/how-to-echo-single-quote-when-using-single-quote-to-wrap-special-characters-in
-	# https://stackoverflow.com/questions/2188199/how-to-use-double-or-single-brackets-parentheses-curly-braces
 	#
 	#INST_VERSION=`java -classpath mitm-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 MiTM-of-minecraft | sed 's/MiTM-of-minecraft: \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
 	#NET_VERSION=`curl -sfL https://mitm.se/mim-install/mitm-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
@@ -315,12 +285,12 @@ generate_run_script()
 
 	# #VARIABLES to shorten classpath
 	#
-	echo 'MiTM='`pwd` >> ./$SIDE'stream.sh'
-	echo '[ -d $MiTM ] || echo "Error: Invalid target directory "$MiTM' >> $SIDE'stream.sh'
-	echo 'MCP=$MiTM/mcp940' >> ./$SIDE'stream.sh'
+	echo 'MiM='`pwd` >> ./$SIDE'stream.sh'
+	echo '[ -d $MiM ] || echo "Error: Invalid target directory "$MiM' >> $SIDE'stream.sh'
+	echo 'MCP=$MiM/mcp940' >> ./$SIDE'stream.sh'
 	echo 'MCPLIBS=$MCP/jars/libraries'$'\n' >> ./$SIDE'stream.sh'
 
-	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiTM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiTM/mitm-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
+	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiM/mitm-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
 	if [[ $SIDE = "down" ]]; then
 		echo 'se.mitm.server.DedicatedServerProxy' >> ./$SIDE'stream.sh'
 	else
@@ -328,6 +298,43 @@ generate_run_script()
 	fi
 
 	chmod +x ./$SIDE'stream.sh'
+
+	echo 'echo "java -classpath mitm-'$SIDE'stream.jar" >> ./'$SIDE'stream.sh'
+}
+
+
+#--------------------------------------------------------------------------------------------------------------------------------
+
+upgrade()
+{
+	[ -d $MITM_DIR/$MCP_DIR/bin/minecraft ] || error_msg "Target directory [$MITM_DIR] not found"
+	cd $MITM_DIR/ || error_exit
+
+	for SIDE in "down" "up"
+	do
+		if [ -f ./mitm-$SIDE'stream.jar' ]; then
+			INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/MiTM-of-minecraft: \(.*\)$/\1/'`
+			#INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
+			#INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
+
+			NET_VERSION=`curl -sfL $NET_DOWNLOAD/mitm-$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
+			#NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
+			#NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
+
+			#echo $INST_VERSION - $NET_VERSION - $INST_MAJOR $INST_MINOR - $NET_MAJOR $NET_MINOR
+			#if [ "$INST_MAJOR" -lt "$NET_MAJOR" ]; then
+			if [ "$INST_VERSION" != "$NET_VERSION" ]; then
+				download_mim || { echo "FAIL!"; continue; }
+				echo $SIDE"stream: "`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version`
+				generate_run_script
+			else
+				INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/MiTM-of-minecraft: \(.*\)$/\1/'`
+				echo $SIDE"stream: ["$INST_VERSION"]; Up to date!"
+			fi
+		fi
+	done
+
+	exit 0;
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -364,18 +371,18 @@ fi
 #--------------------------------------------------------------------------------------------------------------------------------
 
 if [[ $UPGRADE == 1 ]]; then
-	upgrade
+	upgrade || error_exit
 fi
 
-create_working_directory
+create_working_directory || error_exit
 cd $MITM_DIR/ || error_exit
 
-compile_jzmq_lib
-download_mcp
-upgrade_astyle
-prep_mcp
-download_mim
-generate_run_script
+compile_jzmq_lib || error_exit
+download_mcp || error_exit
+upgrade_astyle || error_exit
+prep_mcp || error_exit
+download_mim || error_exit 
+generate_run_script || error_exit
 
 cd ..
 
