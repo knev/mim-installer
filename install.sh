@@ -47,7 +47,7 @@ if [ "$NET_INST_VERSION" == "" ]; then
 	fi
 	echo
 else
-	[ "$INST_VERSION" == "$NET_INST_VERSION" ] || error_msg "This installer is outdated [v$INST_VERSION]. Please obtain the newer [v$NET_INST_VERSION]."
+	[ "$INST_VERSION" -lt "$NET_INST_VERSION" ] && error_msg "This installer is outdated [v$INST_VERSION]. Please obtain the newer [v$NET_INST_VERSION]."
 fi
 
 #--------------------------------------------------------------------------------------------------------------------------------
