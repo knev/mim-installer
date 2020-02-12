@@ -55,6 +55,7 @@ fi
 # https://stackoverflow.com/questions/394230/how-to-detect-the-os-from-a-bash-script
 #if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
+#TODO: use /proc/version or g++ --version or uname -v instead to find linux version?
 # https://en.wikipedia.org/wiki/Uname
 #
 UNAME="$(uname -s)"
@@ -268,28 +269,48 @@ generate_run_script()
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
 	echo '#!/bin/bash'$'\n' > $SIDE'stream.sh'
 
-	#[ -f mitm-downstream.jar ] || { echo "File [mitm-downstream.jar] not found. Abort."; exit 1; }
 	#
-	echo '[ -f mitm-'$SIDE'stream.jar ] || { echo "File [mitm-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $SIDE'stream.sh'
-
 	# basically don't have to have to escape anything except for single quotes, which aren't escaped inside single quotes
 	# https://unix.stackexchange.com/questions/187651/how-to-echo-single-quote-when-using-single-quote-to-wrap-special-characters-in
 	# http://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
 	#
-	#INST_VERSION=`java -classpath mitm-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 MiTM-of-minecraft | sed 's/MiTM-of-minecraft: \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
-	#NET_VERSION=`curl -sfL https://mitm.se/mim-install/mitm-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
-	#[ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "upstream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }
+
+	# [ -f mitm-downstream.jar ] || { echo "File [mitm-downstream.jar] not found. Abort."; exit 1; }
+	#
+	echo '[ -f mitm-'$SIDE'stream.jar ] || { echo "File [mitm-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $SIDE'stream.sh'
+
+	# INST_VERSION=`java -classpath mitm-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 MiTM-of-minecraft | sed 's/MiTM-of-minecraft: \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
+	# NET_VERSION=`curl -sfL https://mitm.se/mim-install/mitm-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
+	# [ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "upstream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }
 	#
 	echo 'INST_VERSION=`java -classpath mitm-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 MiTM-of-minecraft | sed '\''s/MiTM-of-minecraft: \(.*\)$/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
 	echo 'NET_VERSION=`curl -sfL '$NET_DOWNLOAD'/mitm-'$SIDE'stream/Version.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
 	echo '[ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "'$SIDE'stream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh'
 
-	# #VARIABLES to shorten classpath
+	# VARIABLES to shorten classpath
 	#
 	echo 'MiM='`pwd` >> ./$SIDE'stream.sh'
 	echo '[ -d $MiM ] || echo "Error: Invalid target directory "$MiM' >> $SIDE'stream.sh'
 	echo 'MCP=$MiM/mcp940' >> ./$SIDE'stream.sh'
 	echo 'MCPLIBS=$MCP/jars/libraries'$'\n' >> ./$SIDE'stream.sh'
+
+	if [[ $ARCH == macOS ]]; then
+		# export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
+		# JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^java version \"\(.*\)\".*$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
+		# [ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; } 
+
+		#TODO: just use $JAVA_HOME here? instead of reading it again?
+		echo 'export JAVA_HOME=`/usr/libexec/java_home -v 1.8`' >> $SIDE'stream.sh' 
+		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^java version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
+		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh' 
+
+	elif [[ $ARCH == "Linux" ]]; then
+		echo 'export JAVA_HOME="'$JAVA_HOME'"' >> $SIDE'stream.sh' 
+		echo '[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH' >> $SIDE'stream.sh'
+		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^java version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
+		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh' 
+
+	fi
 
 	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiM/mitm-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
 	if [[ $SIDE = "down" ]]; then
@@ -302,7 +323,6 @@ generate_run_script()
 
 	echo 'echo "java -classpath mitm-'$SIDE'stream.jar" >> ./'$SIDE'stream.sh'
 }
-
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
@@ -342,11 +362,24 @@ upgrade()
 
 REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
-REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
+#REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 
-#TODO which (other) java versions are supported?
-JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^java version \"\(.*\)\"$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
-[ "$JAVA_VERSION" == "1.8" ] || error_msg "only Java JDK version 1.8 is currently supported"
+if [[ $ARCH == macOS ]]; then
+	# https://stackoverflow.com/questions/21964709/how-to-set-or-change-the-default-java-jdk-version-on-os-x
+	export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
+	JAVA_HOME_ERROR='JAVA_HOME is determined by "/usr/libexec/java_home"'
+elif [[ $ARCH == "Linux" ]]; then
+	# https://stackoverflow.com/questions/41059994/default-java-java-home-vs-sudo-update-alternatives-config-java
+	# https://unix.stackexchange.com/questions/212139/how-to-switch-java-environment-for-specific-process
+	[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH
+	JAVA_HOME_ERROR='JAVA_HOME should point to the JDK root e.g., export JAVA_HOME="/usr/lib/jvm/jdk-8"'
+else
+	error_msg "Unknown Java JDK support for architecture: [$UNAME]"
+fi
+
+echo 'JAVA_HOME='$JAVA_HOME'; '`java -version 2>&1 | head -n 1`
+JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^java version \"\(.*\)\".*$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
+[ "$JAVA_VERSION" == "1.8" ] || { echo $JAVA_HOME_ERROR; error_msg "This install script requires Java JDK version 1.8"; }
 
 REQ=g++; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
 REQ=git; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
