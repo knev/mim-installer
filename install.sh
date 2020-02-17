@@ -317,10 +317,12 @@ generate_run_script()
 
 	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiM/mitm-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
 	if [[ $SIDE = "down" ]]; then
-		echo 'se.mitm.server.DedicatedServerProxy' >> ./$SIDE'stream.sh'
+		echo -n 'se.mitm.server.DedicatedServerProxy' >> ./$SIDE'stream.sh'
 	else
-		echo 'se.mitm.client.MinecraftClientProxy' >> ./$SIDE'stream.sh'
+		echo -n 'se.mitm.client.MinecraftClientProxy' >> ./$SIDE'stream.sh'
 	fi
+	# https://unix.stackexchange.com/questions/108635/why-i-cant-escape-spaces-on-a-bash-script/108663#108663
+	echo ' "$@"' >> ./$SIDE'stream.sh'
 
 	chmod +x ./$SIDE'stream.sh'
 
