@@ -282,6 +282,10 @@ generate_run_script()
 	#
 	echo '[ -f mitm-'$SIDE'stream.jar ] || { echo "File [mitm-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $SIDE'stream.sh'
 
+	# while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mitm-upstream.jar se.mitm.version.Version`; exit 0; }; shift; done
+	#
+	echo 'while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mitm-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $SIDE'stream.sh' 
+	
 	# INST_VERSION=`java -classpath mitm-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 MiTM-of-minecraft | sed 's/MiTM-of-minecraft: \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
 	# NET_VERSION=`curl -sfL https://mitm.se/mim-install/mitm-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
 	# [ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "upstream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }
