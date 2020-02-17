@@ -100,8 +100,8 @@ done
 
 create_working_directory() 
 {
-	if [ -d $MITM_DIR/$MCP_DIR/bin/minecraft ]; then
-		read -s -n 1 -p "Target directory [$MITM_DIR] exists, overwrite? [N/y] " INPUT || error_exit
+	if [ -d "$MITM_DIR"/$MCP_DIR/bin/minecraft ]; then
+		read -s -n 1 -p 'Target directory ['$MITM_DIR'] exists, overwrite? [N/y] ' INPUT || error_exit
 		RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
 		if [[ "$RES" != "y" ]]; then
 			echo $'\n'"Abort."
@@ -109,8 +109,8 @@ create_working_directory()
 		fi
 		echo
 	fi
-	echo "Setting up working directory: [$MITM_DIR] ..."
-	mkdir -p $MITM_DIR || error_msg "failed to make target directory: [$MITM_DIR]"
+	echo 'Setting up working directory: ['$MITM_DIR'] ...'
+	mkdir -p "$MITM_DIR" || error_msg 'failed to make target directory: ['$MITM_DIR']'
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -292,8 +292,8 @@ generate_run_script()
 
 	# VARIABLES to shorten classpath
 	#
-	echo 'MiM='`pwd` >> ./$SIDE'stream.sh'
-	echo '[ -d $MiM ] || echo "Error: Invalid target directory "$MiM' >> $SIDE'stream.sh'
+	echo 'MiM="'`pwd`'"' >> ./$SIDE'stream.sh'
+	echo '[ -d "$MiM" ] || echo "Error: Invalid target directory "$MiM' >> $SIDE'stream.sh'
 	echo 'MCP=$MiM/mcp940' >> ./$SIDE'stream.sh'
 	echo 'MCPLIBS=$MCP/jars/libraries'$'\n' >> ./$SIDE'stream.sh'
 
@@ -331,8 +331,8 @@ generate_run_script()
 
 upgrade()
 {
-	[ -d $MITM_DIR/$MCP_DIR/bin/minecraft ] || error_msg "Target directory [$MITM_DIR] not found"
-	cd $MITM_DIR/ || error_exit
+	[ -d "$MITM_DIR"/$MCP_DIR/bin/minecraft ] || error_msg 'Target directory ['$MITM_DIR'] not found'
+	cd "$MITM_DIR"/ || error_exit
 
 	for SIDE in "down" "up"
 	do
@@ -413,7 +413,7 @@ if [[ $UPGRADE == 1 ]]; then
 fi
 
 create_working_directory || error_exit
-cd $MITM_DIR/ || error_exit
+cd "$MITM_DIR"/ || error_exit
 
 compile_jzmq_lib || error_exit
 download_mcp || error_exit
