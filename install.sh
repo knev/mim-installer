@@ -15,7 +15,7 @@ pause() {
 }
 
 usage() {
-	echo "usage: $0 [-d|--directory directory] [-u|--upgrade]"
+	echo "usage: $0 [-m|--minecraft DIRECTORY] [-d|--directory DIRECTORY] [-u|--upgrade]"
 }
 
 error_msg() {
@@ -72,6 +72,7 @@ esac
 #
 MITM_DIR=MiM
 MCP_DIR=mcp940
+MC_DIR="" # Ubuntu: $PATH/.minecraft
 UPGRADE=0
 SIDE="down"
 while [ "$1" != "" ]; do
@@ -79,9 +80,12 @@ while [ "$1" != "" ]; do
 		-d | --directory )		shift
 								MITM_DIR=$1
 								;;
-		-u | --upgrade)			UPGRADE=1
+		-m | --minecraft )		shift
+								MC_DIR=$1
 								;;
-		--upstream)				SIDE="up"
+		-u | --upgrade )		UPGRADE=1
+								;;
+		--upstream )			SIDE="up"
 								;;
 		-h | --help )			usage
 								exit 0
@@ -146,7 +150,7 @@ download_mcp()
 	if [ -f mcp940.zip ]; then
 		echo "File [mcp940.zip] exists, ... reusing"
 	else
-		curl -f -o mcp940.zip -L http://www.modcoderpack.com/files/mcp940.zip || error_exit
+	curl -f -o mcp940.zip -L http://www.modcoderpack.com/files/mcp940.zip || error_exit
 	fi
 	unzip -qo -d $MCP_DIR/. mcp940.zip || error_exit
 
@@ -211,7 +215,10 @@ prep_mcp()
 	#REQ assets/minecraft should exist, it could be hiding in the <version>.jar file; Linux?
 
 	# echo Decompiling Minecraft ...
-	./decompile.sh --norecompile || error_exit 
+	WORKING_DIR=()
+	# https://unix.stackexchange.com/questions/531944/bash-command-splitting-up-giving-errors
+	[ -n "$MC_DIR" ] && { WORKING_DIR=(-w "$MC_DIR"); echo 'Minecraft working directory set to ['$MC_DIR']'; }
+	./decompile.sh "${WORKING_DIR[@]}" --norecompile || error_exit 
 	# decompile.sh doesn't return an error code when 1.12.jar not found e.g., "Please run launcher & Minecraft at least once"
 	[ ! -d src/minecraft ] && error_exit
 	[ ! -d src/minecraft_server ] && error_exit
