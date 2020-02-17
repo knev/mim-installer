@@ -308,13 +308,13 @@ generate_run_script()
 
 		#TODO: just use $JAVA_HOME here? instead of reading it again?
 		echo 'export JAVA_HOME=`/usr/libexec/java_home -v 1.8`' >> $SIDE'stream.sh' 
-		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^java version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
+		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
 		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh' 
 
 	elif [[ $ARCH == "Linux" ]]; then
 		echo 'export JAVA_HOME="'$JAVA_HOME'"' >> $SIDE'stream.sh' 
 		echo '[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH' >> $SIDE'stream.sh'
-		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^java version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
+		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
 		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh' 
 
 	fi
@@ -385,7 +385,8 @@ else
 fi
 
 echo 'JAVA_HOME='$JAVA_HOME'; '`java -version 2>&1 | head -n 1`
-JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^java version \"\(.*\)\".*$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
+# Oracle reports "java version". OpenJDK reports "openjdk version".
+JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^.*version \"\(.*\)\".*$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
 [ "$JAVA_VERSION" == "1.8" ] || { echo $JAVA_HOME_ERROR; error_msg "This install script requires Java JDK version 1.8"; }
 
 REQ=g++; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
