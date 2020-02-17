@@ -30,7 +30,7 @@ error_exit() {
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=3
+INST_VERSION=4
 
 NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
 NET_INST_VERSION=`curl -sfL --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
