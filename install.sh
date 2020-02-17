@@ -147,11 +147,7 @@ download_mcp()
 	echo == Downloading MCP940 for Minecraft v1.12 ==
 	[ -d $MCP_DIR ] && { rm -rf $MCP_DIR || error_exit; }
 	mkdir -p $MCP_DIR || error_msg "failed to make target directory: [$MCP_DIR]"
-	if [ -f mcp940.zip ]; then
-		echo "File [mcp940.zip] exists, ... reusing"
-	else
 	curl -f -o mcp940.zip -L http://www.modcoderpack.com/files/mcp940.zip || error_exit
-	fi
 	unzip -qo -d $MCP_DIR/. mcp940.zip || error_exit
 
 	rm mcp940.zip
