@@ -342,8 +342,11 @@ generate_run_script()
 
 upgrade()
 {
-	[ -d "$MITM_DIR"/$MCP_DIR/bin/minecraft ] || error_msg 'Target directory ['$MITM_DIR'] not found'
-	cd "$MITM_DIR"/ || error_exit
+	if [ -d "$MITM_DIR"/$MCP_DIR/bin/minecraft ]; then
+		cd "$MITM_DIR"/ || error_exit
+	else
+		[ -d ./$MCP_DIR/bin/minecraft ] || error_msg 'Target directory ['$MITM_DIR'] not found'
+	fi
 
 	for SIDE in "down" "up"
 	do
