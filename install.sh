@@ -32,8 +32,13 @@ error_exit() {
 
 INST_VERSION=4
 
+# (23) Failed writing body: 
+# https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
+# This happens when a piped program (e.g. grep) closes the read pipe before the previous program is finished writing the whole page.
+# ... as soon as grep has what it wants it will close the read stream from curl.
+# 
 NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
-NET_INST_VERSION=`curl -sfL --url $NET_INST_URL | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
+NET_INST_VERSION=`curl -sfL --url $NET_INST_URL 2>/dev/null | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
 NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
 
 if [ "$NET_INST_VERSION" == "" ]; then
