@@ -262,7 +262,7 @@ prep_mcp()
 
 download_mim() 
 {
-	echo "== Downloading Man in the Middle ["$SIDE"stream] component =="
+	echo "== Downloading MiM ["$SIDE"stream] component =="
 	[ -f ./mim-$SIDE'stream.jar' ] && { cp ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
 	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mim-$SIDE'stream'/mim-$SIDE'stream.jar' || return 1
 	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || retun 1
@@ -366,6 +366,7 @@ upgrade()
 				echo $SIDE"stream: "`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version`
 				generate_run_script
 			else
+				echo "== MiM ["$SIDE"stream] component =="
 				INST_VERSION=`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'`
 				echo $SIDE"stream: ["$INST_VERSION"]; Up to date!"
 			fi
