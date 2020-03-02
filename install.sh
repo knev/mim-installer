@@ -30,7 +30,7 @@ error_exit() {
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=4
+INST_VERSION=5
 
 # (23) Failed writing body: 
 # https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
@@ -263,9 +263,9 @@ prep_mcp()
 download_mim() 
 {
 	echo "== Downloading Man in the Middle ["$SIDE"stream] component =="
-	[ -f ./mitm-$SIDE'stream.jar' ] && { cp ./mitm-$SIDE'stream.jar' ./mitm-$SIDE'stream.jar~' || return 1; }
-	curl -f -o ./mitm-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mitm-$SIDE'stream'/mitm-$SIDE'stream.jar' || return 1
-	mv ./mitm-$SIDE'stream.jar.tmp' ./mitm-$SIDE'stream.jar' || retun 1
+	[ -f ./mim-$SIDE'stream.jar' ] && { cp ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
+	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mim-$SIDE'stream'/mim-$SIDE'stream.jar' || return 1
+	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || retun 1
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -283,20 +283,20 @@ generate_run_script()
 	# http://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
 	#
 
-	# [ -f mitm-downstream.jar ] || { echo "File [mitm-downstream.jar] not found. Abort."; exit 1; }
+	# [ -f mim-downstream.jar ] || { echo "File [mim-downstream.jar] not found. Abort."; exit 1; }
 	#
-	echo '[ -f mitm-'$SIDE'stream.jar ] || { echo "File [mitm-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $SIDE'stream.sh'
+	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $SIDE'stream.sh'
 
-	# while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mitm-upstream.jar se.mitm.version.Version`; exit 0; }; shift; done
+	# while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-upstream.jar se.mitm.version.Version`; exit 0; }; shift; done
 	#
-	echo 'while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mitm-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $SIDE'stream.sh' 
+	echo 'while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $SIDE'stream.sh' 
 	
-	# INST_VERSION=`java -classpath mitm-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
-	# NET_VERSION=`curl -sfL https://mitm.se/mim-install/mitm-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
+	# INST_VERSION=`java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
+	# NET_VERSION=`curl -sfL https://mitm.se/mim-install/mim-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
 	# [ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "upstream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }
 	#
-	echo 'INST_VERSION=`java -classpath mitm-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed '\''s/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
-	echo 'NET_VERSION=`curl -sfL '$NET_DOWNLOAD'/mitm-'$SIDE'stream/Version.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
+	echo 'INST_VERSION=`java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed '\''s/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
+	echo 'NET_VERSION=`curl -sfL '$NET_DOWNLOAD'/mim-'$SIDE'stream/Version.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
 	echo '[ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "'$SIDE'stream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh'
 
 	# VARIABLES to shorten classpath
@@ -324,7 +324,7 @@ generate_run_script()
 
 	fi
 
-	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiM/mitm-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
+	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiM/mim-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
 	if [[ $SIDE = "down" ]]; then
 		echo -n 'se.mitm.server.DedicatedServerProxy' >> ./$SIDE'stream.sh'
 	else
@@ -335,7 +335,7 @@ generate_run_script()
 
 	chmod +x ./$SIDE'stream.sh'
 
-	echo 'echo "java -classpath mitm-'$SIDE'stream.jar" >> ./'$SIDE'stream.sh'
+	echo 'echo "java -classpath mim-'$SIDE'stream.jar" >> ./'$SIDE'stream.sh'
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -350,12 +350,12 @@ upgrade()
 
 	for SIDE in "down" "up"
 	do
-		if [ -f ./mitm-$SIDE'stream.jar' ]; then
-			INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'`
+		if [ -f ./mim-$SIDE'stream.jar' ]; then
+			INST_VERSION=`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'`
 			#INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
 			#INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
 
-			NET_VERSION=`curl -sfL $NET_DOWNLOAD/mitm-$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
+			NET_VERSION=`curl -sfL $NET_DOWNLOAD/mim-$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
 			#NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
 			#NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
 
@@ -363,10 +363,10 @@ upgrade()
 			#if [ "$INST_MAJOR" -lt "$NET_MAJOR" ]; then
 			if [ "$INST_VERSION" != "$NET_VERSION" ]; then
 				download_mim || { echo "FAIL!"; continue; }
-				echo $SIDE"stream: "`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version`
+				echo $SIDE"stream: "`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version`
 				generate_run_script
 			else
-				INST_VERSION=`java -classpath mitm-$SIDE'stream.jar' se.mitm.version.Version | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'`
+				INST_VERSION=`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'`
 				echo $SIDE"stream: ["$INST_VERSION"]; Up to date!"
 			fi
 		fi
