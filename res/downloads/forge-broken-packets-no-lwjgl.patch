@@ -1,0 +1,61 @@
+diff --git a/net/minecraft/client/Minecraft.java b/net/minecraft/client/Minecraft.java
+index 66f232a..70eb105 100644
+--- a/net/minecraft/client/Minecraft.java
++++ b/net/minecraft/client/Minecraft.java
+@@ -3232,7 +3232,12 @@ public class Minecraft implements IThreadListener, ISnooperInfo
+      */
+     public static long getSystemTime()
+     {
+-        return Sys.getTime() * 1000L / Sys.getTimerResolution();
++        // calls LWJGL
++        //return Sys.getTime() * 1000L / Sys.getTimerResolution();
++
++        // http://ninjacave.com/lwjglbasics4
++        //
++        return System.nanoTime() / 1000000L;
+     }
+ 
+     /**
+diff --git a/net/minecraft/network/NetworkManager.java b/net/minecraft/network/NetworkManager.java
+index 00c879d..575631d 100644
+--- a/net/minecraft/network/NetworkManager.java
++++ b/net/minecraft/network/NetworkManager.java
+@@ -93,6 +93,10 @@ public class NetworkManager extends SimpleChannelInboundHandler < Packet<? >>
+         this.direction = packetDirection;
+     }
+ 
++    public EnumPacketDirection getPacketDirection() {
++        return this.direction;
++    }
++
+     public void channelActive(ChannelHandlerContext p_channelActive_1_) throws Exception
+     {
+         super.channelActive(p_channelActive_1_);
+diff --git a/net/minecraft/network/play/server/SPacketSpawnMob.java b/net/minecraft/network/play/server/SPacketSpawnMob.java
+index 8acce0f..d2b9c2a 100644
+--- a/net/minecraft/network/play/server/SPacketSpawnMob.java
++++ b/net/minecraft/network/play/server/SPacketSpawnMob.java
+@@ -123,7 +123,10 @@ public class SPacketSpawnMob implements Packet<INetHandlerPlayClient>
+         buf.writeShort(this.velocityX);
+         buf.writeShort(this.velocityY);
+         buf.writeShort(this.velocityZ);
++        if (null != this.dataManager)//PLG
+         this.dataManager.writeEntries(buf);
++        if (null != this.dataManagerEntries) //PLG
++            EntityDataManager.writeEntries(this.dataManagerEntries, buf); //PLG
+     }
+ 
+     /**
+diff --git a/net/minecraft/network/play/server/SPacketSpawnPlayer.java b/net/minecraft/network/play/server/SPacketSpawnPlayer.java
+index 7e9accf..2d0346c 100644
+--- a/net/minecraft/network/play/server/SPacketSpawnPlayer.java
++++ b/net/minecraft/network/play/server/SPacketSpawnPlayer.java
+@@ -67,6 +67,8 @@ public class SPacketSpawnPlayer implements Packet<INetHandlerPlayClient>
+         buf.writeDouble(this.z);
+         buf.writeByte(this.yaw);
+         buf.writeByte(this.pitch);
++        if (null == this.watcher) //PLG
++            this.watcher= new EntityDataManager(null);
+         this.watcher.writeEntries(buf);
+     }
+ 

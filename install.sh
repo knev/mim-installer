@@ -30,7 +30,7 @@ error_exit() {
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=5
+INST_VERSION=6
 
 # (23) Failed writing body: 
 # https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
@@ -75,15 +75,16 @@ esac
 
 # http://linuxcommand.org/lc3_wss0120.php
 #
-MITM_DIR=MiM
-MCP_DIR=mcp940
+MIM_DIR=MiM
+FORGE_VERSION=1.12-14.21.1.2387
+FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VERSION/snapshot/20170624
 MC_DIR="" # Ubuntu: $PATH/.minecraft
 UPGRADE=0
 SIDE="down"
 while [ "$1" != "" ]; do
 	case $1 in
 		-d | --directory )		shift
-								MITM_DIR=$1
+								MIM_DIR=$1
 								;;
 		-m | --minecraft )		shift
 								MC_DIR=$1
@@ -105,8 +106,8 @@ done
 
 create_working_directory() 
 {
-	if [ -d "$MITM_DIR"/$MCP_DIR/bin/minecraft ]; then
-		read -s -n 1 -p 'Target directory ['$MITM_DIR'] exists, overwrite? [N/y] ' INPUT || error_exit
+	if [ -f "$MIM_DIR"/forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ]; then
+		read -s -n 1 -p 'Target directory ['$MIM_DIR'] exists, overwrite? [N/y] ' INPUT || error_exit
 		RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
 		if [[ "$RES" != "y" ]]; then
 			echo $'\n'"Abort."
@@ -114,8 +115,8 @@ create_working_directory()
 		fi
 		echo
 	fi
-	echo 'Setting up working directory: ['$MITM_DIR'] ...'
-	mkdir -p "$MITM_DIR" || error_msg 'failed to make target directory: ['$MITM_DIR']'
+	echo 'Setting up working directory: ['$MIM_DIR'] ...'
+	mkdir -p "$MIM_DIR" || error_msg 'failed to make target directory: ['$MIM_DIR']'
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -149,51 +150,19 @@ compile_jzmq_lib()
 
 download_mcp()
 {
-	echo == Downloading MCP940 for Minecraft v1.12 ==
-	[ -d $MCP_DIR ] && { rm -rf $MCP_DIR || error_exit; }
-	mkdir -p $MCP_DIR || error_msg "failed to make target directory: [$MCP_DIR]"
-	curl -f -o mcp940.zip -L http://www.modcoderpack.com/files/mcp940.zip || error_exit
-	unzip -qo -d $MCP_DIR/. mcp940.zip || error_exit
-
-	rm mcp940.zip
+	[ -d mcp940 ] && { rm -rf mcp940 || error_exit; }
+	return 0;
 }
 
-#--------------------------------------------------------------------------------------------------------------------------------
-
-upgrade_astyle()
+download_forge()
 {
-	echo == Upgrading astyle to version 2.05.1 ==
-	ASTYLE=astyle_2.05.1_XXX.tar.gz
-	if [[ $ARCH == "Linux" ]]; then
-		ASTYLE=astyle_2.05.1_linux.tar.gz
-		[ -f $ASTYLE ] || curl -f -o $ASTYLE -L https://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/$ASTYLE/download || error_exit
-		tar -xzf $ASTYLE || error_exit
-		pushd astyle/build/gcc > /dev/null || error_exit
-		make || error_exit
-		cp bin/astyle ../../../mcp940/runtime/bin/. || error_exit
-		popd > /dev/null
-		sed -i 's/^AStyle_linux  = astyle/AStyle_linux	= \%\(DirRuntime\)s\/bin\/astyle/g' mcp940/conf/mcp.cfg
-		rm -rf astyle
+	echo == Downloading Forge for Minecraft v1.12 ==
+	[ -d forge-$FORGE_VERSION-mdk ] && { rm -rf forge-$FORGE_VERSION-mdk || error_exit; }
+	mkdir -p forge-$FORGE_VERSION-mdk || error_msg "failed to make target directory: [forge-$FORGE_VERSION-mdk]"
+	curl -f -o forge-$FORGE_VERSION-mdk.zip -L https://files.minecraftforge.net/maven/net/minecraftforge/forge/$FORGE_VERSION/forge-$FORGE_VERSION-mdk.zip || error_exit
+	unzip -qo -d forge-$FORGE_VERSION-mdk/. forge-$FORGE_VERSION-mdk.zip || error_exit
 
-		rm $ASTYLE
-
-	elif [[ $ARCH == "macOS" ]]; then
-		mv mcp940/runtime/bin/astyle-osx mcp940/runtime/bin/astyle-osx-2.02 || error_exit
-		ASTYLE=astyle_2.05.1_macosx.tar.gz
-		[ -f $ASTYLE ] || curl -f -o $ASTYLE -L https://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/$ASTYLE/download || error_exit
-		tar -xzf $ASTYLE || error_exit
-		pushd astyle/build/mac > /dev/null || error_exit
-		make || error_exit
-		cp bin/astyle ../../../mcp940/runtime/bin/astyle-osx || error_exit
-		popd > /dev/null
-		rm -rf astyle
-
-		rm $ASTYLE
-
-	else 
-		#TODO https://sourceforge.net/projects/astyle/files/astyle/astyle%202.05.1/AStyle_2.05.1_windows.zip/download
-		echo Do nothing ...
-	fi
+	rm forge-$FORGE_VERSION-mdk.zip
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -245,7 +214,7 @@ prep_mcp()
 	echo Patching ...
 	git apply --stat --ignore-space-change -p2 --apply --reject merge-client-server-astyle.patch || error_exit
 
-	echo == Downloading /broken-packets-no-lwjgl.patch ==
+	echo == Downloading broken-packets-no-lwjgl.patch ==
 	curl -f -o ./broken-packets-no-lwjgl.patch -L $NET_DOWNLOAD/broken-packets-no-lwjgl.patch || error_exit
 	echo Patching ...
 	git apply --stat --ignore-space-change -p2 --apply --reject ./broken-packets-no-lwjgl.patch || error_exit
@@ -254,6 +223,48 @@ prep_mcp()
 	./recompile.sh || error_exit
 	[ ! -d bin/minecraft ] && error_exit
 	[ ! -d bin/minecraft_server ] && error_exit
+
+	cd ..
+}
+
+prep_forge()
+{
+	cd forge-$FORGE_VERSION-mdk || error_exit
+
+	./gradlew -g gradle.cache :fixMcSources
+	
+	# Skip :applySourcePatches
+	#
+	cp $FORGE_SNAPSHOT/forge-$FORGE_VERSION-decompFixed.jar $FORGE_SNAPSHOT/forge-$FORGE_VERSION-patched.jar || error_exit
+
+	./gradlew -g gradle.cache :remapMcSources -x :deobfCompileDummyTask -x :deobfProvidedDummyTask -x :extractDependencyATs -x :extractMcpData -x :extractMcpMappings -x :getVersionJson -x :extractUserdev -x :genSrgs -x :downloadClient -x :downloadServer -x :splitServerJar -x :mergeJars -x :deobfMcSRG -x :decompileMc -x :fixMcSources -x :applySourcePatches # -x :remapMcSources -x :recompileMc
+
+	# patch source
+	#
+	[ -d $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources ] && { rm -rf $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources || error_exit; }
+	mkdir $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources || error_exit
+	pushd $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources || error_exit
+	jar xf ../forgeSrc-$FORGE_VERSION-sources.jar
+
+	# here we don't want to apply any patches to the code that will break the :recompileMc task
+
+	# https://stackoverflow.com/questions/24821431/git-apply-patch-fails-silently-no-errors-but-nothing-happens
+	# Use: patch -p1 < path/file.patch
+
+	BROKEN_PACKETS_NO_LWJGL=forge-broken-packets-no-lwjgl.patch
+	echo == Downloading $BROKEN_PACKETS_NO_LWJGL ==
+	curl -f -o ./$BROKEN_PACKETS_NO_LWJGL -L $NET_DOWNLOAD/$BROKEN_PACKETS_NO_LWJGL || error_exit
+	echo Patching ...
+	git apply --stat --ignore-space-change -p1 --apply --reject ./$BROKEN_PACKETS_NO_LWJGL || error_exit
+
+	rm ../forgeSrc-$FORGE_VERSION-sources.jar
+	jar cf ../forgeSrc-$FORGE_VERSION-sources.jar *
+	popd
+
+	# :applySourcePatches is the task we definitely want to skip!
+	./gradlew -g gradle.cache :recompileMc -x :deobfCompileDummyTask -x :deobfProvidedDummyTask -x :extractDependencyATs -x :extractMcpData -x :extractMcpMappings -x :getVersionJson -x :extractUserdev -x :genSrgs -x :downloadClient -x :downloadServer -x :splitServerJar -x :mergeJars -x :deobfMcSRG -x :decompileMc -x :fixMcSources -x :applySourcePatches -x :remapMcSources # -x :recompileMc
+
+	[ ! -f $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ] && error_exit
 
 	cd ..
 }
@@ -303,8 +314,7 @@ generate_run_script()
 	#
 	echo 'MiM="'`pwd`'"' >> ./$SIDE'stream.sh'
 	echo '[ -d "$MiM" ] || echo "Error: Invalid target directory "$MiM' >> $SIDE'stream.sh'
-	echo 'MCP=$MiM/mcp940' >> ./$SIDE'stream.sh'
-	echo 'MCPLIBS=$MCP/jars/libraries'$'\n' >> ./$SIDE'stream.sh'
+	echo 'LIB=$MiM/forge-'$FORGE_VERSION'-mdk/gradle.cache/caches/modules-2/files-2.1'$'\n' >> ./$SIDE'stream.sh'
 
 	if [[ $ARCH == macOS ]]; then
 		# export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
@@ -324,7 +334,49 @@ generate_run_script()
 
 	fi
 
-	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'`find mcp940/jars/libraries -type f -name "*.jar" -print0 | sed 's/mcp940\/jars\/libraries/$MCPLIBS/g' | tr '\000' ':'`'$MCP/bin/minecraft:$MCP/jars:$MiM/mim-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
+	#FOUND_LIBS=(`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" `)
+	FOUND_LIBS=(
+		#forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/minecraft/net/minecraftforge/forge/1.12-14.21.1.2387/snapshot/20170624/forgeSrc-1.12-14.21.1.2387.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/soundsystem/20120107/419c05fe9be71f792b2d76cfc9b67f1ed0fec7f6/soundsystem-20120107.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/codecjorbis/20101023/c73b5636faf089d9f00e8732a829577de25237ee/codecjorbis-20101023.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/codecwav/20101023/12f031cfe88fef5c1dd36c563c0a3a69bd7261da/codecwav-20101023.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/libraryjavasound/20101123/5c5e304366f75f9eaa2e8cca546a1fb6109348b3/libraryjavasound-20101123.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/librarylwjglopenal/20100824/73e80d0794c39665aec3f62eee88ca91676674ef/librarylwjglopenal-20100824.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/ca.weblite/java-objc-bridge/1.0.0/6ef160c3133a78de015830860197602ca1c855d3/java-objc-bridge-1.0.0.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.1/f7be08ec23c21485b9b5a1cf1654c2ec8c58168d/jsr305-3.0.1.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.ibm.icu/icu4j-core-mojang/51.2/63d216a9311cca6be337c1e458e587f99d382b84/icu4j-core-mojang-51.2.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/authlib/1.5.25/9834cdf236c22e84b946bba989e2f94ef5897c3c/authlib-1.5.25.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/patchy/1.1/aef610b34a1be37fa851825f12372b78424d8903/patchy-1.1.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/realms/1.10.17/e6a623bf93a230b503b0e3ae18c196fcd5aa3299/realms-1.10.17.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/text2speech/1.10.3/48fd510879dff266c3815947de66e3d4809f8668/text2speech-1.10.3.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/commons-codec/commons-codec/1.10/4b95f4897fa13f2cd904aee711aeafc0c5295cd8/commons-codec-1.10.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/commons-io/commons-io/2.5/2852e6e05fbb95076fc091f6d1780f1f8fe35e0f/commons-io-2.5.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/commons-logging/commons-logging/1.1.3/f6f66e966c70a83ffbdb6f17a0919eaf7c8aca7f/commons-logging-1.1.3.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/io.netty/netty-all/4.1.9.Final/97860965d6a0a6b98e7f569f3f966727b8db75/netty-all-4.1.9.Final.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/it.unimi.dsi/fastutil/7.1.0/9835253257524c1be7ab50c057aa2d418fb72082/fastutil-7.1.0.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.dev.jna/jna/4.4.0/cb208278274bf12ebdb56c61bd7407e6f774d65a/jna-4.4.0.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.dev.jna/platform/3.4.0/e3f70017be8100d3d6923f50b3d2ee17714e9c13/platform-3.4.0.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.jinput/jinput/2.0.5/39c7796b469a600f72380316f6b1f11db6c2c7c4/jinput-2.0.5.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.jutils/jutils/1.0.0/e12fe1fda814bd348c1579329c86943d2cd3c6a6/jutils-1.0.0.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.sf.jopt-simple/jopt-simple/5.0.3/cdd846cfc4e0f7eefafc02c0f5dce32b9303aa2a/jopt-simple-5.0.3.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.8.1/a698750c16740fd5b3871425f4cb3bbaa87f529d/commons-compress-1.8.1.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.5/6c6c702c89bfff3cd9e80b04d668c5e190d588c6/commons-lang3-3.5.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.httpcomponents/httpclient/4.3.3/18f4247ff4572a074444572cee34647c43e7c9c7/httpclient-4.3.3.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.httpcomponents/httpcore/4.3.2/31fbbff1ddbf98f3aa7377c94d33b0447c646b6e/httpcore-4.3.2.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-api/2.8.1/e801d13612e22cad62a3f4f3fe7fdbe6334a8e72/log4j-api-2.8.1.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-core/2.8.1/4ac28ff2f1ddf05dae3043a190451e8c46b73c31/log4j-core-2.8.1.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.lwjgl.lwjgl/lwjgl/2.9.2-nightly-20140822/7707204c9ffa5d91662de95f0a224e2f721b22af/lwjgl-2.9.2-nightly-20140822.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.lwjgl.lwjgl/lwjgl_util/2.9.2-nightly-20140822/f0e612c840a7639c1f77f68d72a28dae2f0c8490/lwjgl_util-2.9.2-nightly-20140822.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/oshi-project/oshi-core/1.1/9ddf7b048a8d701be231c0f4f95fd986198fd2d8/oshi-core-1.1.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.google.code.gson/gson/2.8.0/c4ba5371a29ac9b2ad6129b1d39ea38750043eff/gson-2.8.0.jar
+		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.google.guava/guava/21.0/3a3d111be1be1b745edfa7d91678a12d7ed38709/guava-21.0.jar
+	)
+	#for LIB in "${FOUND_LIBS[@]}"; do echo "${LIB}"; done
+
+	CLASSPATH=`echo ${FOUND_LIBS[@]} | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr ' ' ':'`
+	#CLASSPATH=`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" -print0 | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr '\000' ':'`
+
+	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/forgeSrc-'$FORGE_VERSION'.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
 	if [[ $SIDE = "down" ]]; then
 		echo -n 'se.mitm.server.DedicatedServerProxy' >> ./$SIDE'stream.sh'
 	else
@@ -342,10 +394,12 @@ generate_run_script()
 
 upgrade()
 {
-	if [ -d "$MITM_DIR"/$MCP_DIR/bin/minecraft ]; then
-		cd "$MITM_DIR"/ || error_exit
+	exit
+
+	if [ -d "$MIM_DIR" ]; then
+		cd "$MIM_DIR"/ || error_exit
 	else
-		[ -d ./$MCP_DIR/bin/minecraft ] || error_msg 'Target directory ['$MITM_DIR'] not found'
+		[ -d ./$MCP_DIR/bin/minecraft ] || error_msg 'Target directory ['$MIM_DIR'] not found'
 	fi
 
 	for SIDE in "down" "up"
@@ -423,17 +477,17 @@ fi
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-if [[ $UPGRADE == 1 ]]; then
-	upgrade || error_exit
-fi
+#if [[ $UPGRADE == 1 ]]; then
+#	upgrade || error_exit
+#fi
 
 create_working_directory || error_exit
-cd "$MITM_DIR"/ || error_exit
+cd "$MIM_DIR"/ || error_exit
 
 compile_jzmq_lib || error_exit
 download_mcp || error_exit
-upgrade_astyle || error_exit
-prep_mcp || error_exit
+download_forge || error_exit
+prep_forge || error_exit
 download_mim || error_exit 
 generate_run_script || error_exit
 
