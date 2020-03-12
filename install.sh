@@ -85,7 +85,7 @@ INST_VERSION=6
 # ... as soon as grep has what it wants it will close the read stream from curl.
 # 
 NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
-NET_INST_VERSION=`curl -sfL --url $NET_INST_URL 2>/dev/null | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
+NET_INST_VERSION=`curl -sfL --url $NET_INST_URL 2>/dev/null | sed -nE '/INST_VERSION=[0-9]+/p' | sed 's/^INST_VERSION=\(.*\)$/\1/'  `
 NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
 
 if [ "$NET_INST_VERSION" == "" ]; then
