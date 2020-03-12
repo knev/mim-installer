@@ -38,8 +38,8 @@ error_exit() {
 #
 UNAME="$(uname -s)"
 case "${UNAME}" in
-	Linux*)		ARCH=Linux;;
-	Darwin*)	ARCH=macOS;;
+	Linux*)		ARCH=linux;;
+	Darwin*)	ARCH=osx;;
 #	CYGWIN*)	ARCH=Cygwin;;
 #	MINGW*)		ARCH=MinGw;;
 #	*)			ARCH="UNKNOWN:${unameOut}"
@@ -54,7 +54,7 @@ FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VER
 MC_DIR="" # Ubuntu: $PATH/.minecraft
 UPGRADE=0
 SIDE="down"
-while [ "$1" != "" ]; do
+while [ ! -z "$1" ]; do
 	case $1 in
 		-d | --directory )		shift
 								MIM_DIR=$1
@@ -87,7 +87,7 @@ INST_VERSION=6
 NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
 NET_INST_VERSION=`curl -sfL --url $NET_INST_URL 2>/dev/null | sed -nE '/INST_VERSION=[0-9]+/p' | sed 's/^INST_VERSION=\(.*\)$/\1/'  `
 
-if [ "$NET_INST_VERSION" == "" ]; then
+if [ -z "$NET_INST_VERSION" ]; then
 	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
 	read -s -n 1 -p "Please check manually for a newer version, continue? [N/y] " INPUT || error_exit
 	RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
@@ -107,7 +107,7 @@ NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok t
 NET_VERSION=`curl -sfL $NET_DOWNLOAD/Version-mim-$SIDE'stream'.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
 NET_SHORT_VERSION=`echo $NET_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
 
-[ "$NET_SHORT_VERSION" == "" ] && error_msg "Unable to determine the latest version of MiM"
+[ -z "$NET_SHORT_VERSION" ] && error_msg "Unable to determine the latest version of MiM"
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
@@ -305,9 +305,9 @@ generate_run_script()
 	#
 	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $SIDE'stream.sh'
 
-	# while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-upstream.jar se.mitm.version.Version`; exit 0; }; shift; done
+	# while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-upstream.jar se.mitm.version.Version`; exit 0; }; shift; done
 	#
-	echo 'while [ "$1" != "" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $SIDE'stream.sh' 
+	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $SIDE'stream.sh' 
 	
 	# INST_VERSION=`java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
 	# NET_VERSION=`curl -sfL https://mitm.se/mim-install/mim-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
@@ -323,7 +323,7 @@ generate_run_script()
 	echo '[ -d "$MiM" ] || echo "Error: Invalid target directory "$MiM' >> $SIDE'stream.sh'
 	echo 'LIB=$MiM/forge-'$FORGE_VERSION'-mdk/gradle.cache/caches/modules-2/files-2.1'$'\n' >> ./$SIDE'stream.sh'
 
-	if [[ $ARCH == macOS ]]; then
+	if [[ $ARCH == osx ]]; then
 		# export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
 		# JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^java version \"\(.*\)\".*$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
 		# [ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; } 
@@ -333,7 +333,7 @@ generate_run_script()
 		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
 		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh' 
 
-	elif [[ $ARCH == "Linux" ]]; then
+	elif [[ $ARCH == linux ]]; then
 		echo 'export JAVA_HOME="'$JAVA_HOME'"' >> $SIDE'stream.sh' 
 		echo '[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH' >> $SIDE'stream.sh'
 		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
@@ -341,46 +341,70 @@ generate_run_script()
 
 	fi
 
-	#FOUND_LIBS=(`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" `)
-	FOUND_LIBS=(
-		#forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/minecraft/net/minecraftforge/forge/1.12-14.21.1.2387/snapshot/20170624/forgeSrc-1.12-14.21.1.2387.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/soundsystem/20120107/419c05fe9be71f792b2d76cfc9b67f1ed0fec7f6/soundsystem-20120107.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/codecjorbis/20101023/c73b5636faf089d9f00e8732a829577de25237ee/codecjorbis-20101023.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/codecwav/20101023/12f031cfe88fef5c1dd36c563c0a3a69bd7261da/codecwav-20101023.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/libraryjavasound/20101123/5c5e304366f75f9eaa2e8cca546a1fb6109348b3/libraryjavasound-20101123.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.paulscode/librarylwjglopenal/20100824/73e80d0794c39665aec3f62eee88ca91676674ef/librarylwjglopenal-20100824.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/ca.weblite/java-objc-bridge/1.0.0/6ef160c3133a78de015830860197602ca1c855d3/java-objc-bridge-1.0.0.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.1/f7be08ec23c21485b9b5a1cf1654c2ec8c58168d/jsr305-3.0.1.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.ibm.icu/icu4j-core-mojang/51.2/63d216a9311cca6be337c1e458e587f99d382b84/icu4j-core-mojang-51.2.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/authlib/1.5.25/9834cdf236c22e84b946bba989e2f94ef5897c3c/authlib-1.5.25.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/patchy/1.1/aef610b34a1be37fa851825f12372b78424d8903/patchy-1.1.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/realms/1.10.17/e6a623bf93a230b503b0e3ae18c196fcd5aa3299/realms-1.10.17.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.mojang/text2speech/1.10.3/48fd510879dff266c3815947de66e3d4809f8668/text2speech-1.10.3.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/commons-codec/commons-codec/1.10/4b95f4897fa13f2cd904aee711aeafc0c5295cd8/commons-codec-1.10.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/commons-io/commons-io/2.5/2852e6e05fbb95076fc091f6d1780f1f8fe35e0f/commons-io-2.5.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/commons-logging/commons-logging/1.1.3/f6f66e966c70a83ffbdb6f17a0919eaf7c8aca7f/commons-logging-1.1.3.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/io.netty/netty-all/4.1.9.Final/97860965d6a0a6b98e7f569f3f966727b8db75/netty-all-4.1.9.Final.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/it.unimi.dsi/fastutil/7.1.0/9835253257524c1be7ab50c057aa2d418fb72082/fastutil-7.1.0.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.dev.jna/jna/4.4.0/cb208278274bf12ebdb56c61bd7407e6f774d65a/jna-4.4.0.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.dev.jna/platform/3.4.0/e3f70017be8100d3d6923f50b3d2ee17714e9c13/platform-3.4.0.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.jinput/jinput/2.0.5/39c7796b469a600f72380316f6b1f11db6c2c7c4/jinput-2.0.5.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.java.jutils/jutils/1.0.0/e12fe1fda814bd348c1579329c86943d2cd3c6a6/jutils-1.0.0.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/net.sf.jopt-simple/jopt-simple/5.0.3/cdd846cfc4e0f7eefafc02c0f5dce32b9303aa2a/jopt-simple-5.0.3.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.8.1/a698750c16740fd5b3871425f4cb3bbaa87f529d/commons-compress-1.8.1.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.5/6c6c702c89bfff3cd9e80b04d668c5e190d588c6/commons-lang3-3.5.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.httpcomponents/httpclient/4.3.3/18f4247ff4572a074444572cee34647c43e7c9c7/httpclient-4.3.3.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.httpcomponents/httpcore/4.3.2/31fbbff1ddbf98f3aa7377c94d33b0447c646b6e/httpcore-4.3.2.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-api/2.8.1/e801d13612e22cad62a3f4f3fe7fdbe6334a8e72/log4j-api-2.8.1.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-core/2.8.1/4ac28ff2f1ddf05dae3043a190451e8c46b73c31/log4j-core-2.8.1.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.lwjgl.lwjgl/lwjgl/2.9.2-nightly-20140822/7707204c9ffa5d91662de95f0a224e2f721b22af/lwjgl-2.9.2-nightly-20140822.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/org.lwjgl.lwjgl/lwjgl_util/2.9.2-nightly-20140822/f0e612c840a7639c1f77f68d72a28dae2f0c8490/lwjgl_util-2.9.2-nightly-20140822.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/oshi-project/oshi-core/1.1/9ddf7b048a8d701be231c0f4f95fd986198fd2d8/oshi-core-1.1.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.google.code.gson/gson/2.8.0/c4ba5371a29ac9b2ad6129b1d39ea38750043eff/gson-2.8.0.jar
-		forge-1.12-14.21.1.2387-mdk/gradle.cache/caches/modules-2/files-2.1/com.google.guava/guava/21.0/3a3d111be1be1b745edfa7d91678a12d7ed38709/guava-21.0.jar
-	)
-	#for LIB in "${FOUND_LIBS[@]}"; do echo "${LIB}"; done
+	echo "Gathering libraries ..."
 
-	CLASSPATH=`echo ${FOUND_LIBS[@]} | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr ' ' ':'`
+	declare -a REQUIRED_LIBS=(
+		"ca.weblite\/java-objc-bridge\/.*"
+		"com.google.code.findbugs\/jsr305\/.*"
+		"com.google.code.gson\/gson\/2.8.0\/.*"
+		"com.google.guava\/guava\/21.0\/.*"
+		"com.ibm.icu\/icu4j-core-mojang\/.*"
+		"com.mojang\/authlib\/.*"
+		"com.mojang\/patchy\/.*"
+		"com.mojang\/realms\/.*"
+		"com.mojang\/text2speech\/.*"
+		"com.paulscode\/codecjorbis\/.*"
+		"com.paulscode\/codecwav\/.*"
+		"com.paulscode\/libraryjavasound\/.*"
+		"com.paulscode\/librarylwjglopenal\/.*"
+		"com.paulscode\/soundsystem\/.*"
+		"commons-codec\/commons-codec\/1.10\/.*"
+		"commons-io\/commons-io\/2.5\/.*"
+		"commons-logging\/commons-logging\/.*"
+		#"org.gobbly-gook\/lib\/.*"
+		"io.netty\/netty-all\/.*"
+		"it.unimi.dsi\/fastutil\/.*"
+		"net.java.dev.jna\/jna\/.*"
+		"net.java.dev.jna\/platform\/.*"
+		"net.java.jinput\/jinput\/.*"
+		"net.java.jinput\/jinput-platform\/.*$ARCH"
+		"net.java.jutils\/jutils\/.*"
+		"net.sf.jopt-simple\/jopt-simple\/.*"
+		"org.apache.commons\/commons-compress\/.*"
+		"org.apache.commons\/commons-lang3\/.*"
+		"org.apache.httpcomponents\/httpclient\/.*"
+		"org.apache.httpcomponents\/httpcore\/.*"
+		"org.apache.logging.log4j\/log4j-api\/.*"
+		"org.apache.logging.log4j\/log4j-core\/.*"
+		"org.lwjgl.lwjgl\/lwjgl\/.*"
+		"org.lwjgl.lwjgl\/lwjgl_util\/.*"
+		"org.lwjgl.lwjgl\/lwjgl-platform\/.*$ARCH"
+		"oshi-project\/oshi-core\/.*"
+	)
+	declare -a FOUND_LIBS=(`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" `)
+
+	declare -a CLASSPATH=()
+	for REQ in ${REQUIRED_LIBS[@]}
+	do 
+		FOUND=""
+		for IDX in ${!FOUND_LIBS[@]}; do 
+			if [ ! -z `echo ${FOUND_LIBS[$IDX]} | sed -n "/^forge-1.12-14.21.1.2387-mdk\/gradle.cache\/caches\/modules-2\/files-2.1\/$REQ.jar$/p"` ]; then
+				[ ! -z $FOUND ] && { echo ${FOUND_LIBS[$IDX]}; echo "WARNING: duplicate library found for ["$( echo $REQ | tr -d '\\' )"]!"; break; }
+				FOUND=${FOUND_LIBS[$IDX]}
+				echo $FOUND
+				CLASSPATH=( ${CLASSPATH[@]} ${FOUND_LIBS[$IDX]} )
+				unset FOUND_LIBS[$IDX]
+			fi
+		done
+
+		[ -z $FOUND ] && echo "WARNING: required library ["$( echo $REQ | tr -d '\\' )"] not found!"
+	done
+	echo "DONE!"
+
+	# Leftovers ...
+	# echo ${FOUND_LIBS[@]} | tr ' ' '\n'
+
+	CLASSPATH=`echo ${CLASSPATH[@]} | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr ' ' ':'`
 	#CLASSPATH=`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" -print0 | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr '\000' ':'`
 
 	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/forgeSrc-'$FORGE_VERSION'.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
@@ -443,11 +467,11 @@ REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$RE
 REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 #REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 
-if [[ $ARCH == macOS ]]; then
+if [[ $ARCH == osx ]]; then
 	# https://stackoverflow.com/questions/21964709/how-to-set-or-change-the-default-java-jdk-version-on-os-x
 	export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
 	JAVA_HOME_ERROR='JAVA_HOME is determined by "/usr/libexec/java_home"'
-elif [[ $ARCH == "Linux" ]]; then
+elif [[ $ARCH == linux ]]; then
 	# https://stackoverflow.com/questions/41059994/default-java-java-home-vs-sudo-update-alternatives-config-java
 	# https://unix.stackexchange.com/questions/212139/how-to-switch-java-environment-for-specific-process
 	[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH
@@ -471,14 +495,14 @@ REQ=curl; which $REQ > /dev/null || error_msg "This install script requires [$RE
 REQ=unzip; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
 
 REQ=libtool # (a mac version is preinstalled)
-if [[ $ARCH == macOS ]]; then
+if [[ $ARCH == osx ]]; then
 	which glibtool > /dev/null || error_msg "This install script requires [libtool] to be installed"
 fi
 
 #TODO host:/usr/local/opt/zmq$ [ -f include/zmq.h ] || echo "NO"
-if [[ $ARCH = "macOS" ]]; then
+if [[ $ARCH = osx ]]; then
 	REQ=zmq # ./configure will fail if not installed
-elif [[ $ARCH = "Linux" ]]; then
+elif [[ $ARCH = linux ]]; then
 	REQ=libzmq3-dev # ./configure will fail if not installed
 fi
 
