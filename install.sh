@@ -30,33 +30,6 @@ error_exit() {
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=6
-
-# (23) Failed writing body: 
-# https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
-# This happens when a piped program (e.g. grep) closes the read pipe before the previous program is finished writing the whole page.
-# ... as soon as grep has what it wants it will close the read stream from curl.
-# 
-NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
-NET_INST_VERSION=`curl -sfL --url $NET_INST_URL 2>/dev/null | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
-NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
-
-if [ "$NET_INST_VERSION" == "" ]; then
-	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
-	read -s -n 1 -p "Please check manually for a newer version, continue? [N/y] " INPUT || error_exit
-	RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
-	if [[ "$RES" != "y" ]]; then
-		echo
-		echo "Abort."
-		exit 0
-	fi
-	echo
-else
-	[ "$INST_VERSION" -lt "$NET_INST_VERSION" ] && error_msg "This installer is outdated [v$INST_VERSION]. Please obtain the newer [v$NET_INST_VERSION]."
-fi
-
-#--------------------------------------------------------------------------------------------------------------------------------
-
 # https://stackoverflow.com/questions/394230/how-to-detect-the-os-from-a-bash-script
 #if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
@@ -101,6 +74,33 @@ while [ "$1" != "" ]; do
 	esac
 	shift
 done
+
+#--------------------------------------------------------------------------------------------------------------------------------
+
+INST_VERSION=6
+
+# (23) Failed writing body: 
+# https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
+# This happens when a piped program (e.g. grep) closes the read pipe before the previous program is finished writing the whole page.
+# ... as soon as grep has what it wants it will close the read stream from curl.
+# 
+NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
+NET_INST_VERSION=`curl -sfL --url $NET_INST_URL 2>/dev/null | grep -m1 INST_VERSION | sed 's/INST_VERSION=\([0-9]*\)/\1/'  `
+NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
+
+if [ "$NET_INST_VERSION" == "" ]; then
+	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
+	read -s -n 1 -p "Please check manually for a newer version, continue? [N/y] " INPUT || error_exit
+	RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
+	if [[ "$RES" != "y" ]]; then
+		echo
+		echo "Abort."
+		exit 0
+	fi
+	echo
+else
+	[ "$INST_VERSION" -lt "$NET_INST_VERSION" ] && error_msg "This installer is outdated [v$INST_VERSION]. Please obtain the newer [v$NET_INST_VERSION]."
+fi
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
