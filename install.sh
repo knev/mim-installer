@@ -86,7 +86,6 @@ INST_VERSION=6
 # 
 NET_INST_URL=https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
 NET_INST_VERSION=`curl -sfL --url $NET_INST_URL 2>/dev/null | sed -nE '/INST_VERSION=[0-9]+/p' | sed 's/^INST_VERSION=\(.*\)$/\1/'  `
-NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
 
 if [ "$NET_INST_VERSION" == "" ]; then
 	echo "Unable to check for installer updates, currently [v$INST_VERSION]"
@@ -101,6 +100,14 @@ if [ "$NET_INST_VERSION" == "" ]; then
 else
 	[ "$INST_VERSION" -lt "$NET_INST_VERSION" ] && error_msg "This installer is outdated [v$INST_VERSION]. Please obtain the newer [v$NET_INST_VERSION]."
 fi
+
+NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
+
+
+NET_VERSION=`curl -sfL $NET_DOWNLOAD/Version-mim-$SIDE'stream'.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
+NET_SHORT_VERSION=`echo $NET_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
+
+[ "$NET_SHORT_VERSION" == "" ] && error_msg "Unable to determine the latest version of MiM"
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
@@ -253,7 +260,7 @@ prep_forge()
 
 	BROKEN_PACKETS_NO_LWJGL=forge-broken-packets-no-lwjgl.patch
 	echo == Downloading $BROKEN_PACKETS_NO_LWJGL ==
-	curl -f -o ./$BROKEN_PACKETS_NO_LWJGL -L $NET_DOWNLOAD/$BROKEN_PACKETS_NO_LWJGL || error_exit
+	curl -f -o ./$BROKEN_PACKETS_NO_LWJGL -L $NET_DOWNLOAD/$NET_SHORT_VERSION/$BROKEN_PACKETS_NO_LWJGL || error_exit
 	echo Patching ...
 	git apply --stat --ignore-space-change -p1 --apply --reject ./$BROKEN_PACKETS_NO_LWJGL || error_exit
 
@@ -275,7 +282,7 @@ download_mim()
 {
 	echo "== Downloading MiM ["$SIDE"stream] component =="
 	[ -f ./mim-$SIDE'stream.jar' ] && { cp ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
-	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/mim-$SIDE'stream'/mim-$SIDE'stream.jar' || return 1
+	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/$NET_SHORT_VERSION/mim-$SIDE'stream.jar' || return 1
 	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || retun 1
 }
 
@@ -307,7 +314,7 @@ generate_run_script()
 	# [ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "upstream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }
 	#
 	echo 'INST_VERSION=`java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed '\''s/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
-	echo 'NET_VERSION=`curl -sfL '$NET_DOWNLOAD'/mim-'$SIDE'stream/Version.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
+	echo 'NET_VERSION=`curl -sfL '$NET_DOWNLOAD'/Version-mim-'$SIDE'stream.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
 	echo '[ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "'$SIDE'stream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh'
 
 	# VARIABLES to shorten classpath
