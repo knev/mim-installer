@@ -297,7 +297,7 @@ generate_run_script()
 	echo 'ARGS=$@'$'\n' >> $SIDE'stream.sh'
 
 	#
-	# basically don't have to have to escape anything except for single quotes, which aren't escaped inside single quotes
+	# basically don't have to have to escape anything except for single quotes, which can not occur inside single quotes
 	# https://unix.stackexchange.com/questions/187651/how-to-echo-single-quote-when-using-single-quote-to-wrap-special-characters-in
 	# http://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
 	#
@@ -310,13 +310,13 @@ generate_run_script()
 	#
 	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $SIDE'stream.sh' 
 	
-	# INST_VERSION=`java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
-	# NET_VERSION=`curl -sfL https://mitm.se/mim-install/mim-stream/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'`
-	# [ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "upstream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }
+	# INST=( `java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
+	# NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-downstream.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
+	# for NR in 0 1 2; do [ ${INST[$NR]} -lt ${NET[$NR]} ] && { echo "downstream-v"${INST[0]}.${INST[1]}-${INST[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; break; }; done
 	#
-	echo 'INST_VERSION=`java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed '\''s/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
-	echo 'NET_VERSION=`curl -sfL '$NET_DOWNLOAD'/Version-mim-'$SIDE'stream.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^\(v[0-9]*.[0-9]*-[0-9]*\)-.*$/\1/'\''`' >> $SIDE'stream.sh'
-	echo '[ -n "$NET_VERSION" ] && [ "$INST_VERSION" != "$NET_VERSION" ] && { echo "'$SIDE'stream-"$INST_VERSION" installed, latest ["$NET_VERSION"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh'
+	echo 'INST=( `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed '\''s/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'\'' | sed '\''s/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'\''` )' >> $SIDE'stream.sh'
+	echo 'NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-downstream.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'\''` )' >> $SIDE'stream.sh'
+	echo 'for NR in 0 1 2; do [ ${INST[$NR]} -lt ${NET[$NR]} ] && { echo "downstream-v"${INST[0]}.${INST[1]}-${INST[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; break; }; done'$'\n' >> $SIDE'stream.sh'
 
 	# VARIABLES to shorten classpath
 	#
