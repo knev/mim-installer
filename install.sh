@@ -468,23 +468,29 @@ REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$RE
 REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 #REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 
+check_java_version()
+{
+	echo 'JAVA_HOME='$JAVA_HOME'; '`java -version 2>&1 | head -n 1`
+	# Oracle reports "java version". OpenJDK reports "openjdk version".
+	JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^.*version \"\(.*\)\".*$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
+	[ "$JAVA_VERSION" == "1.8" ]
+}
+
 if [[ $ARCH == osx ]]; then
 	# https://stackoverflow.com/questions/21964709/how-to-set-or-change-the-default-java-jdk-version-on-os-x
 	export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
-	JAVA_HOME_ERROR='JAVA_HOME is determined by "/usr/libexec/java_home"'
+	check_java_version || { echo JAVA_HOME is determined by \"/usr/libexec/java_home\"; error_msg "This install script requires Java JDK version 1.8"; }
 elif [[ $ARCH == linux ]]; then
 	# https://stackoverflow.com/questions/41059994/default-java-java-home-vs-sudo-update-alternatives-config-java
 	# https://unix.stackexchange.com/questions/212139/how-to-switch-java-environment-for-specific-process
 	[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH
-	JAVA_HOME_ERROR='JAVA_HOME should point to the JDK root e.g., export JAVA_HOME="/usr/lib/jvm/jdk-8"'
+	if ! check_java_version; then
+		echo 'JAVA_HOME should point to the JDK root e.g., export JAVA_HOME="/usr/lib/jvm/openjdk-8-jdk"'
+		error_msg "This install script requires Java JDK version 1.8"
+	fi
 else
 	error_msg "Unknown Java JDK support for architecture: [$UNAME]"
 fi
-
-echo 'JAVA_HOME='$JAVA_HOME'; '`java -version 2>&1 | head -n 1`
-# Oracle reports "java version". OpenJDK reports "openjdk version".
-JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed 's/^.*version \"\(.*\)\".*$/\1/' | sed 's/\([0-9].[0-9]\).*/\1/'`
-[ "$JAVA_VERSION" == "1.8" ] || { echo $JAVA_HOME_ERROR; error_msg "This install script requires Java JDK version 1.8"; }
 
 REQ=g++; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
 REQ=git; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
