@@ -293,7 +293,8 @@ generate_run_script()
 	echo "== Generating ["$SIDE"stream] run script =="
 	[ -f $SIDE'stream.sh' ] && { cp $SIDE'stream.sh' $SIDE'stream.sh~' || return 1; }
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
-	echo '#!/bin/bash'$'\n' > $SIDE'stream.sh'
+	echo '#!/bin/bash' > $SIDE'stream.sh'
+	echo 'ARGS=$@'$'\n' >> $SIDE'stream.sh'
 
 	#
 	# basically don't have to have to escape anything except for single quotes, which aren't escaped inside single quotes
@@ -414,7 +415,7 @@ generate_run_script()
 		echo -n 'se.mitm.client.MinecraftClientProxy' >> ./$SIDE'stream.sh'
 	fi
 	# https://unix.stackexchange.com/questions/108635/why-i-cant-escape-spaces-on-a-bash-script/108663#108663
-	echo ' "$@"' >> ./$SIDE'stream.sh'
+	echo ' $ARGS' >> ./$SIDE'stream.sh'
 
 	chmod +x ./$SIDE'stream.sh'
 
