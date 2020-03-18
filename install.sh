@@ -77,7 +77,7 @@ done
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=6
+INST_VERSION=7
 
 # (23) Failed writing body: 
 # https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
@@ -128,6 +128,17 @@ create_working_directory()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
+patches()
+{
+	[ -d mcp940 ] && { rm -rf mcp940 || error_exit; }
+	[ -f proxy.properties ] && { mv proxy.properties mim-upstream.properties || error_exit; }
+	[ -f downstream.sh ] && { mv downstream.sh mim.sh~ || error_exit; }
+	[ -f upstream.sh ] && { mv upstream.sh upstream.sh~ || error_exit; }
+	return 0;
+}
+
+#--------------------------------------------------------------------------------------------------------------------------------
+
 compile_jzmq_lib()
 {
 	echo == Compiling Java binding for zmq ==
@@ -154,12 +165,6 @@ compile_jzmq_lib()
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
-
-download_mcp()
-{
-	[ -d mcp940 ] && { rm -rf mcp940 || error_exit; }
-	return 0;
-}
 
 download_forge()
 {
@@ -290,11 +295,14 @@ download_mim()
 
 generate_run_script() 
 {
+	OUT=mim.sh
+	[ $SIDE == "up" ] && OUT=mim-upstream.sh
+
 	echo "== Generating ["$SIDE"stream] run script =="
-	[ -f $SIDE'stream.sh' ] && { cp $SIDE'stream.sh' $SIDE'stream.sh~' || return 1; }
+	[ -f $OUT ] && { mv $OUT $OUT'~' || return 1; }
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
-	echo '#!/bin/bash' > $SIDE'stream.sh'
-	echo 'ARGS=$@'$'\n' >> $SIDE'stream.sh'
+	echo '#!/bin/bash' > $OUT
+	echo 'ARGS=$@'$'\n' >> $OUT
 
 	#
 	# basically don't have to have to escape anything except for single quotes, which can not occur inside single quotes
@@ -304,25 +312,25 @@ generate_run_script()
 
 	# [ -f mim-downstream.jar ] || { echo "File [mim-downstream.jar] not found. Abort."; exit 1; }
 	#
-	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $SIDE'stream.sh'
+	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $OUT
 
 	# while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-upstream.jar se.mitm.version.Version`; exit 0; }; shift; done
 	#
-	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $SIDE'stream.sh' 
+	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $OUT
 	
 	# INST=( `java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
 	# NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-downstream.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
 	# for NR in 0 1 2; do [ ${INST[$NR]} -lt ${NET[$NR]} ] && { echo "downstream-v"${INST[0]}.${INST[1]}-${INST[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; break; }; done
 	#
-	echo 'INST=( `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed '\''s/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'\'' | sed '\''s/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'\''` )' >> $SIDE'stream.sh'
-	echo 'NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-downstream.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'\''` )' >> $SIDE'stream.sh'
-	echo 'for NR in 0 1 2; do [ ${INST[$NR]} -lt ${NET[$NR]} ] && { echo "downstream-v"${INST[0]}.${INST[1]}-${INST[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; break; }; done'$'\n' >> $SIDE'stream.sh'
+	echo 'INST=( `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed '\''s/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'\'' | sed '\''s/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'\''` )' >> $OUT
+	echo 'NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-'$SIDE'stream.java | grep -m1 commit | sed '\''s/.*commit=[ ]*\"\([^"]*\)\";/\1/'\'' | sed '\''s/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'\''` )' >> $OUT
+	echo 'for NR in 0 1 2; do [ ${INST[$NR]} -lt ${NET[$NR]} ] && { echo "MiM-'$SIDE'stream-v"${INST[0]}.${INST[1]}-${INST[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], please upgrade ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; break; }; done'$'\n' >> $OUT
 
 	# VARIABLES to shorten classpath
 	#
-	echo 'MiM="'`pwd`'"' >> ./$SIDE'stream.sh'
-	echo '[ -d "$MiM" ] || echo "Error: Invalid target directory "$MiM' >> $SIDE'stream.sh'
-	echo 'LIB=$MiM/forge-'$FORGE_VERSION'-mdk/gradle.cache/caches/modules-2/files-2.1'$'\n' >> ./$SIDE'stream.sh'
+	echo 'MiM="'`pwd`'"' >> ./$OUT
+	echo '[ -d "$MiM" ] || echo "Error: Invalid target directory "$MiM' >> $OUT
+	echo 'LIB=$MiM/forge-'$FORGE_VERSION'-mdk/gradle.cache/caches/modules-2/files-2.1'$'\n' >> ./$OUT
 
 	if [[ $ARCH == osx ]]; then
 		# export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
@@ -330,15 +338,15 @@ generate_run_script()
 		# [ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; } 
 
 		#TODO: just use $JAVA_HOME here? instead of reading it again?
-		echo 'export JAVA_HOME=`/usr/libexec/java_home -v 1.8`' >> $SIDE'stream.sh' 
-		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
-		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh' 
+		echo 'export JAVA_HOME=`/usr/libexec/java_home -v 1.8`' >> $OUT
+		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $OUT
+		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $OUT
 
 	elif [[ $ARCH == linux ]]; then
-		echo 'export JAVA_HOME="'$JAVA_HOME'"' >> $SIDE'stream.sh' 
-		echo '[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH' >> $SIDE'stream.sh'
-		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $SIDE'stream.sh'
-		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $SIDE'stream.sh' 
+		echo 'export JAVA_HOME="'$JAVA_HOME'"' >> $OUT
+		echo '[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH' >> $OUT
+		echo 'JAVA_VERSION=`java -version 2>&1 | head -n 1 | sed '\''s/^.*version \"\(.*\)\".*$/\1/'\'' | sed '\''s/\([0-9].[0-9]\).*/\1/'\''`' >> $OUT
+		echo '[ "$JAVA_VERSION" == "1.8" ] || { echo "Java JDK version 1.8 not found; unsupported environment ..."; read -s -n 1 -p "Press [KEY] to continue ..."; echo; }'$'\n' >> $OUT
 
 	fi
 
@@ -408,18 +416,18 @@ generate_run_script()
 	CLASSPATH=`echo ${CLASSPATH[@]} | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr ' ' ':'`
 	#CLASSPATH=`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" -print0 | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr '\000' ':'`
 
-	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/forgeSrc-'$FORGE_VERSION'.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$SIDE'stream.sh'
+	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/forgeSrc-'$FORGE_VERSION'.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$OUT
 	if [[ $SIDE = "down" ]]; then
-		echo -n 'se.mitm.server.DedicatedServerProxy' >> ./$SIDE'stream.sh'
+		echo -n 'se.mitm.server.DedicatedServerProxy' >> ./$OUT
 	else
-		echo -n 'se.mitm.client.MinecraftClientProxy' >> ./$SIDE'stream.sh'
+		echo -n 'se.mitm.client.MinecraftClientProxy' >> ./$OUT
 	fi
 	# https://unix.stackexchange.com/questions/108635/why-i-cant-escape-spaces-on-a-bash-script/108663#108663
-	echo ' $ARGS' >> ./$SIDE'stream.sh'
+	echo ' $ARGS' >> ./$OUT
 
-	chmod +x ./$SIDE'stream.sh'
+	chmod +x ./$OUT
 
-	echo 'echo "java -classpath mim-'$SIDE'stream.jar" >> ./'$SIDE'stream.sh'
+	echo 'echo "java -classpath mim-'$SIDE'stream.jar" >> ./'$OUT
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -522,8 +530,8 @@ fi
 create_working_directory || error_exit
 cd "$MIM_DIR"/ || error_exit
 
+patches || error_exit
 compile_jzmq_lib || error_exit
-download_mcp || error_exit
 download_forge || error_exit
 prep_forge || error_exit
 download_mim || error_exit 
