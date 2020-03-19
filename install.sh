@@ -201,66 +201,6 @@ download_forge()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-prep_mcp()
-{
-	cd mcp940 || error_exit
-
-	echo == Downloading Minecraft Server v1.12 == # https://mcversions.net/
-	curl -f -o jars/minecraft_server.1.12.jar -L https://launcher.mojang.com/v1/objects/8494e844e911ea0d63878f64da9dcc21f53a3463/server.jar || error_exit
-
-	echo == Downloading MinecraftDiscovery.py.patch ==
-	curl -f -o MinecraftDiscovery.py.patch -L https://gist.githubusercontent.com/PLG/6196bc01810c2ade88f0843253b56097/raw/1bd38308838f793a484722aa46eae503328bb50f/MinecraftDiscovery.py.patch || error_exit
-	git status > /dev/null 2>&1 && error_msg "Target directory can not be part of a git repo; patching will fail" # reported to git community
-	echo Patching ...
-	git apply --stat --apply --reject MinecraftDiscovery.py.patch || error_exit
-
-	REQ=python2; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
-
-	#REQ assets/minecraft should exist, it could be hiding in the <version>.jar file; Linux?
-
-	# echo Decompiling Minecraft ...
-	WORKING_DIR=()
-	# https://unix.stackexchange.com/questions/531944/bash-command-splitting-up-giving-errors
-	[ -n "$MC_DIR" ] && { WORKING_DIR=(-w "$MC_DIR"); echo 'Minecraft working directory set to ['$MC_DIR']'; }
-	./decompile.sh "${WORKING_DIR[@]}" --norecompile || error_exit 
-	# decompile.sh doesn't return an error code when 1.12.jar not found e.g., "Please run launcher & Minecraft at least once"
-	[ ! -d src/minecraft ] && error_exit
-	[ ! -d src/minecraft_server ] && error_exit
-
-	echo == Copying Minecraft assets ==
-	cp -r temp/src/minecraft/assets/minecraft jars/assets/. || error_exit
-	touch jars/assets/.mcassetsroot
-
-	# echo Duplicating Minecraft ...
-	cp src/minecraft_server/net/minecraft/network/rcon/IServer.java src/minecraft/net/minecraft/network/rcon/. || error_exit
-	cp src/minecraft_server/net/minecraft/network/rcon/RConOutputStream.java src/minecraft/net/minecraft/network/rcon/. || error_exit
-	cp src/minecraft_server/net/minecraft/network/rcon/RConThreadBase.java src/minecraft/net/minecraft/network/rcon/. || error_exit
-	cp src/minecraft_server/net/minecraft/network/rcon/RConThreadClient.java src/minecraft/net/minecraft/network/rcon/. || error_exit
-	cp src/minecraft_server/net/minecraft/network/rcon/RConThreadMain.java src/minecraft/net/minecraft/network/rcon/. || error_exit
-	cp src/minecraft_server/net/minecraft/network/rcon/RConThreadQuery.java src/minecraft/net/minecraft/network/rcon/. || error_exit
-	cp src/minecraft_server/net/minecraft/network/rcon/RConUtils.java src/minecraft/net/minecraft/network/rcon/. || error_exit
-	cp src/minecraft_server/net/minecraft/server/ServerEula.java src/minecraft/net/minecraft/server/. || error_exit
-	cp -r src/minecraft_server/net/minecraft/server/dedicated src/minecraft/net/minecraft/server/. || error_exit
-	cp -r src/minecraft_server/net/minecraft/server/gui src/minecraft/net/minecraft/server/. || error_exit
-
-	echo == Downloading merge-client-server.patch ==
-	curl -f -o ./merge-client-server-astyle.patch -L $NET_DOWNLOAD/merge-client-server-astyle.patch || error_exit
-	echo Patching ...
-	git apply --stat --ignore-space-change -p2 --apply --reject merge-client-server-astyle.patch || error_exit
-
-	echo == Downloading broken-packets-no-lwjgl.patch ==
-	curl -f -o ./broken-packets-no-lwjgl.patch -L $NET_DOWNLOAD/broken-packets-no-lwjgl.patch || error_exit
-	echo Patching ...
-	git apply --stat --ignore-space-change -p2 --apply --reject ./broken-packets-no-lwjgl.patch || error_exit
-
-	# echo Recompiling Minecraft ...
-	./recompile.sh || error_exit
-	[ ! -d bin/minecraft ] && error_exit
-	[ ! -d bin/minecraft_server ] && error_exit
-
-	cd ..
-}
-
 prep_forge()
 {
 	if (( ! $CLEAN )); then
