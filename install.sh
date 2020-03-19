@@ -1,21 +1,12 @@
 #!/bin/bash
 
-# https://stackoverflow.com/questions/2188199/how-to-use-double-or-single-brackets-parentheses-curly-braces
-
-# One of two philosophies:
-# 1) install each section; once it is done, don't repeat it.
-# 2) install each section, but clobber existing files to ensure a clean install.
-# Going with option 2.
-
-#--------------------------------------------------------------------------------------------------------------------------------
-
 pause() {
 	read -n 1 -p "Press [KEY] to continue ..."
 	echo
 }
 
 usage() {
-	echo "usage: $0 [-m|--minecraft DIRECTORY] [-d|--directory DIRECTORY] [-u|--upgrade]"
+	echo "usage: $0 [-d|--directory DIRECTORY] [--clean]"
 }
 
 error_msg() {
@@ -33,7 +24,7 @@ error_exit() {
 # https://stackoverflow.com/questions/394230/how-to-detect-the-os-from-a-bash-script
 #if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
-#TODO: use /proc/version or g++ --version or uname -v instead to find linux version?
+#TODO: use /proc/version or uname -v instead to find linux version?
 # https://en.wikipedia.org/wiki/Uname
 #
 UNAME="$(uname -s)"
@@ -48,23 +39,22 @@ esac
 
 # http://linuxcommand.org/lc3_wss0120.php
 #
-MIM_DIR=MiM
+DIRECTORY=""
+DOWNSTREAM=0
+UPSTREAM=0
 FORGE_VERSION=1.12-14.21.1.2387
 FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VERSION/snapshot/20170624
-MC_DIR="" # Ubuntu: $PATH/.minecraft
-UPGRADE=0
-SIDE="down"
+CLEAN=0
 while [ ! -z "$1" ]; do
 	case $1 in
 		-d | --directory )		shift
-								MIM_DIR=$1
+								DIRECTORY=$1
 								;;
-		-m | --minecraft )		shift
-								MC_DIR=$1
+		--downstream )			DOWNSTREAM=1
 								;;
-		-u | --upgrade )		UPGRADE=1
+		--upstream )			UPSTREAM=1
 								;;
-		--upstream )			SIDE="up"
+		--clean )				CLEAN=1
 								;;
 		-h | --help )			usage
 								exit 0
@@ -101,46 +91,68 @@ else
 	[ "$INST_VERSION" -lt "$NET_INST_VERSION" ] && error_msg "This installer is outdated [v$INST_VERSION]. Please obtain the newer [v$NET_INST_VERSION]."
 fi
 
-NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
-
-
-NET_VERSION=`curl -sfL $NET_DOWNLOAD/Version-mim-$SIDE'stream'.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
-NET_SHORT_VERSION=`echo $NET_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
-
-[ -z "$NET_SHORT_VERSION" ] && error_msg "Unable to determine the latest version of MiM"
-
 #--------------------------------------------------------------------------------------------------------------------------------
+
+MIM_DIR=MiM
+SIDE="down"
+#(( $DOWNSTREAM )) && { MIM_DIR=MiM; SIDE="down"; } Default !
+(( $UPSTREAM )) && { MIM_DIR=MiM-upstream; SIDE="up"; }
 
 create_working_directory() 
 {
-	if [ -f "$MIM_DIR"/forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ]; then
-		read -s -n 1 -p 'Target directory ['$MIM_DIR'] exists, overwrite? [N/y] ' INPUT || error_exit
-		RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
-		if [[ "$RES" != "y" ]]; then
-			echo $'\n'"Abort."
-			exit 0
-		fi
-		echo
+#	if [ -f "$MIM_DIR"/forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ]; then
+#		read -s -n 1 -p 'Target directory ['$MIM_DIR'] exists, overwrite? [N/y] ' INPUT || error_exit
+#		RES=$( tr '[:upper:]' '[:lower:]' <<<"$INPUT" )
+#		if [[ "$RES" != "y" ]]; then
+#			echo $'\n'"Abort."
+#			exit 0
+#		fi
+#		echo
+#	fi
+
+	if [ $DIRECTORY ]; then
+		MIM_DIR=$DIRECTORY
+	else
+		[[ -f ./mim-upstream.jar || -f ./mim-downstream.jar ]] && { MIM_DIR="."; echo "Installation found in \$PWD, using ['$MIM_DIR'] as target ..."; }
 	fi
-	echo 'Setting up working directory: ['$MIM_DIR'] ...'
+
+	# -----
+
+	if (( ! $CLEAN )); then
+		(( ! $UPSTREAM )) && [[ -f "$MIM_DIR"/mim-downstream.jar ]] && { echo "Set up target directory :: SKIPPED"; echo "Upgrading ..."; return 0; } # redundant SIDE="down" 
+		(( ! $DOWNSTREAM )) && [[ -f "$MIM_DIR"/mim-upstream.jar ]] && { echo "Set up target directory :: SKIPPED"; echo "Upgrading ..."; SIDE="up"; return 0; }
+	fi
+
+	# -----
+
+	echo 'Setting up target directory: ['$MIM_DIR'] ...'
 	mkdir -p "$MIM_DIR" || error_msg 'failed to make target directory: ['$MIM_DIR']'
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-patches()
+NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
+
+check_latest_version()
 {
-	[ -d mcp940 ] && { rm -rf mcp940 || error_exit; }
-	[ -f proxy.properties ] && { mv proxy.properties mim-upstream.properties || error_exit; }
-	[ -f downstream.sh ] && { mv downstream.sh mim.sh~ || error_exit; }
-	[ -f upstream.sh ] && { mv upstream.sh upstream.sh~ || error_exit; }
-	return 0;
+	NET_VERSION=`curl -sfL $NET_DOWNLOAD/Version-mim-$SIDE'stream'.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
+	NET_SHORT_VERSION=`echo $NET_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
+
+	[ -z "$NET_SHORT_VERSION" ] && error_msg "Unable to determine the latest version of MiM"
+
+	return 0; #TODO: required because something before sets the error
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
 compile_jzmq_lib()
 {
+	if (( ! $CLEAN )); then
+		[ -f libs/libjzmq.a ] && { echo "Compile Java binding for zmq :: SKIPPED"; return 0; }
+	fi 
+
+	# -----
+
 	echo == Compiling Java binding for zmq ==
 	JZMQ=jzmq.git
 	# https://linuxize.com/post/bash-check-if-file-exists/
@@ -168,7 +180,17 @@ compile_jzmq_lib()
 
 download_forge()
 {
-	echo == Downloading Forge for Minecraft v1.12 ==
+	[ -d mcp940 ] && { rm -rf mcp940 || error_exit; }
+
+	# -----
+
+	if (( ! $CLEAN )); then
+		[ -d forge-$FORGE_VERSION-mdk ] && { echo "Download Forge for Minecraft :: SKIPPED"; return 0; }
+	fi
+
+	# -----
+
+	echo == Downloading Forge for Minecraft ==
 	[ -d forge-$FORGE_VERSION-mdk ] && { rm -rf forge-$FORGE_VERSION-mdk || error_exit; }
 	mkdir -p forge-$FORGE_VERSION-mdk || error_msg "failed to make target directory: [forge-$FORGE_VERSION-mdk]"
 	curl -f -o forge-$FORGE_VERSION-mdk.zip -L https://files.minecraftforge.net/maven/net/minecraftforge/forge/$FORGE_VERSION/forge-$FORGE_VERSION-mdk.zip || error_exit
@@ -241,6 +263,12 @@ prep_mcp()
 
 prep_forge()
 {
+	if (( ! $CLEAN )); then
+		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ] && { echo "Preparing Minecraft sources :: SKIPPED"; return 0; }
+	fi
+
+	# -----
+
 	cd forge-$FORGE_VERSION-mdk || error_exit
 
 	./gradlew -g gradle.cache :fixMcSources
@@ -285,19 +313,49 @@ prep_forge()
 
 download_mim() 
 {
+	if (( ! $CLEAN )); then
+		if [ -f ./mim-$SIDE'stream.jar' ]; then
+			INST=( `java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
+			NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-$SIDE'stream.java' | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
+			UPGRADE=0; for NR in 0 1 2; do [ ${INST[$NR]} -lt ${NET[$NR]} ] && UPGRADE=1; done
+
+			(( ! $UPGRADE )) && { echo "Download MiM-"$SIDE"stream component :: SKIPPED"; return 0; }
+
+			echo "MiM-downstream-v"${INST[0]}.${INST[1]}-${INST[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], upgrading ..."
+		fi
+	fi
+
+	# -----
+
 	echo "== Downloading MiM ["$SIDE"stream] component =="
-	[ -f ./mim-$SIDE'stream.jar' ] && { cp ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
+	[ -f ./mim-$SIDE'stream.jar' ] && { mv ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
 	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/$NET_SHORT_VERSION/mim-$SIDE'stream.jar' || return 1
 	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || retun 1
+	echo $SIDE"stream: "`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version`
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
 generate_run_script() 
 {
+
+	if [ $SIDE == "up" ]; then
+		[ -f upstream.sh ] && { mv upstream.sh mim-upstream.sh~ || error_exit; }
+		[ -f proxy.properties ] && { mv proxy.properties mim-upstream.properties || error_exit; }
+	else
+		[ -f downstream.sh ] && { mv downstream.sh mim.sh~ || error_exit; }
+	fi
+
+	# -----
+
+	#if (( ! $CLEAN )); then
+	#fi
+
+	# -----
+
 	OUT=mim.sh
 	[ $SIDE == "up" ] && OUT=mim-upstream.sh
-
+	
 	echo "== Generating ["$SIDE"stream] run script =="
 	[ -f $OUT ] && { mv $OUT $OUT'~' || return 1; }
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
@@ -432,46 +490,6 @@ generate_run_script()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-upgrade()
-{
-	exit
-
-	if [ -d "$MIM_DIR" ]; then
-		cd "$MIM_DIR"/ || error_exit
-	else
-		[ -d ./$MCP_DIR/bin/minecraft ] || error_msg 'Target directory ['$MIM_DIR'] not found'
-	fi
-
-	for SIDE in "down" "up"
-	do
-		if [ -f ./mim-$SIDE'stream.jar' ]; then
-			INST_VERSION=`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'`
-			#INST_MAJOR=`echo $INST_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
-			#INST_MINOR=`echo $INST_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
-
-			NET_VERSION=`curl -sfL $NET_DOWNLOAD/mim-$SIDE'stream'/Version.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
-			#NET_MAJOR=`echo $NET_VERSION | sed 's/^v\([0-9]*\).*$/\1/'`
-			#NET_MINOR=`echo $NET_VERSION | sed 's/^v[0-9]*\.\([0-9]*\)-.*$/\1/'`
-
-			#echo $INST_VERSION - $NET_VERSION - $INST_MAJOR $INST_MINOR - $NET_MAJOR $NET_MINOR
-			#if [ "$INST_MAJOR" -lt "$NET_MAJOR" ]; then
-			if [ "$INST_VERSION" != "$NET_VERSION" ]; then
-				download_mim || { echo "FAIL!"; continue; }
-				echo $SIDE"stream: "`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version`
-				generate_run_script
-			else
-				echo "== MiM ["$SIDE"stream] component =="
-				INST_VERSION=`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/'`
-				echo $SIDE"stream: ["$INST_VERSION"]; Up to date!"
-			fi
-		fi
-	done
-
-	exit 0;
-}
-
-#--------------------------------------------------------------------------------------------------------------------------------
-
 REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
 #REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
@@ -523,14 +541,10 @@ fi
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-#if [[ $UPGRADE == 1 ]]; then
-#	upgrade || error_exit
-#fi
-
 create_working_directory || error_exit
+check_latest_version || error_exit
 cd "$MIM_DIR"/ || error_exit
 
-patches || error_exit
 compile_jzmq_lib || error_exit
 download_forge || error_exit
 prep_forge || error_exit
