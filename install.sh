@@ -133,7 +133,7 @@ create_working_directory()
 
 NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
 
-check_latest_version()
+check_latest_mim_version()
 {
 	NET_VERSION=`curl -sfL $NET_DOWNLOAD/Version-mim-$SIDE'stream'.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
 	NET_SHORT_VERSION=`echo $NET_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
@@ -425,7 +425,7 @@ generate_run_script()
 
 	chmod +x ./$OUT
 
-	echo 'echo "java -classpath mim-'$SIDE'stream.jar" >> ./'$OUT
+	echo '"java -classpath mim-'$SIDE'stream.jar" >> ./'$OUT
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -482,7 +482,7 @@ fi
 #--------------------------------------------------------------------------------------------------------------------------------
 
 create_working_directory || error_exit
-check_latest_version || error_exit
+check_latest_mim_version || error_exit
 cd "$MIM_DIR"/ || error_exit
 
 compile_jzmq_lib || error_exit
