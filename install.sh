@@ -351,65 +351,59 @@ generate_run_script()
 	echo "Gathering libraries ..."
 
 	declare -a REQUIRED_LIBS=(
-		"ca.weblite\/java-objc-bridge\/.*"
-		"com.google.code.findbugs\/jsr305\/.*"
-		"com.google.code.gson\/gson\/2.8.0\/.*"
-		"com.google.guava\/guava\/21.0\/.*"
-		"com.ibm.icu\/icu4j-core-mojang\/.*"
-		"com.mojang\/authlib\/.*"
-		"com.mojang\/patchy\/.*"
-		"com.mojang\/realms\/.*"
-		"com.mojang\/text2speech\/.*"
-		"com.paulscode\/codecjorbis\/.*"
-		"com.paulscode\/codecwav\/.*"
-		"com.paulscode\/libraryjavasound\/.*"
-		"com.paulscode\/librarylwjglopenal\/.*"
-		"com.paulscode\/soundsystem\/.*"
-		"commons-codec\/commons-codec\/1.10\/.*"
-		"commons-io\/commons-io\/2.5\/.*"
-		"commons-logging\/commons-logging\/.*"
-		#"org.gobbly-gook\/lib\/.*"
-		"io.netty\/netty-all\/.*"
-		"it.unimi.dsi\/fastutil\/.*"
-		"net.java.dev.jna\/jna\/.*"
-		"net.java.dev.jna\/platform\/.*"
-		"net.java.jinput\/jinput\/.*"
-		"net.java.jinput\/jinput-platform\/.*$ARCH"
-		"net.java.jutils\/jutils\/.*"
-		"net.sf.jopt-simple\/jopt-simple\/.*"
-		"org.apache.commons\/commons-compress\/.*"
-		"org.apache.commons\/commons-lang3\/.*"
-		"org.apache.httpcomponents\/httpclient\/.*"
-		"org.apache.httpcomponents\/httpcore\/.*"
-		"org.apache.logging.log4j\/log4j-api\/.*"
-		"org.apache.logging.log4j\/log4j-core\/.*"
-		"org.lwjgl.lwjgl\/lwjgl\/.*"
-		"org.lwjgl.lwjgl\/lwjgl_util\/.*"
-		"org.lwjgl.lwjgl\/lwjgl-platform\/.*$ARCH"
-		"oshi-project\/oshi-core\/.*"
+		"1|ca.weblite\/java-objc-bridge\/.*\.jar"
+		"1|com.google.code.findbugs\/jsr305\/.*\.jar"
+		"1|com.google.code.gson\/gson\/2.8.0\/.*\.jar"
+		"1|com.google.guava\/guava\/21.0\/.*\.jar"
+		"1|com.ibm.icu\/icu4j-core-mojang\/.*\.jar"
+		"1|com.mojang\/authlib\/.*\.jar"
+		"1|com.mojang\/patchy\/.*\.jar"
+		"1|com.mojang\/realms\/.*\.jar"
+		"1|com.mojang\/text2speech\/.*\.jar"
+		"1|com.paulscode\/codecjorbis\/.*\.jar"
+		"1|com.paulscode\/codecwav\/.*\.jar"
+		"1|com.paulscode\/libraryjavasound\/.*\.jar"
+		"1|com.paulscode\/librarylwjglopenal\/.*\.jar"
+		"1|com.paulscode\/soundsystem\/.*\.jar"
+		"1|commons-codec\/commons-codec\/1.10\/.*\.jar"
+		"1|commons-io\/commons-io\/2.5\/.*\.jar"
+		"1|commons-logging\/commons-logging\/.*\.jar"
+		"1|io.netty\/netty-all\/.*\.jar"
+		"1|it.unimi.dsi\/fastutil\/.*\.jar"
+		"1|net.java.dev.jna\/jna\/.*\.jar"
+		"1|net.java.dev.jna\/platform\/.*\.jar"
+		"1|net.java.jinput\/jinput\/.*\.jar"
+		"1|net.java.jinput\/jinput-platform\/.*$ARCH\.jar"
+		"1|net.java.jutils\/jutils\/.*\.jar"
+		"1|net.sf.jopt-simple\/jopt-simple\/.*\.jar"
+		"1|org.apache.commons\/commons-compress\/.*\.jar"
+		"1|org.apache.commons\/commons-lang3\/.*\.jar"
+		"1|org.apache.httpcomponents\/httpclient\/.*\.jar"
+		"1|org.apache.httpcomponents\/httpcore\/.*\.jar"
+		"1|org.apache.logging.log4j\/log4j-api\/.*\.jar"
+		"1|org.apache.logging.log4j\/log4j-core\/.*\.jar"
+		"1|org.lwjgl.lwjgl\/lwjgl\/.*\.jar"
+		"1|org.lwjgl.lwjgl\/lwjgl_util\/.*\.jar"
+		"1|org.lwjgl.lwjgl\/lwjgl-platform\/.*$ARCH\.jar"
+		"1|oshi-project\/oshi-core\/.*\.jar"
 	)
 	declare -a FOUND_LIBS=(`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" `)
 
 	declare -a CLASSPATH=()
 	for REQ in ${REQUIRED_LIBS[@]}
 	do 
-		FOUND=""
-		for IDX in ${!FOUND_LIBS[@]}; do 
-			if [ ! -z `echo ${FOUND_LIBS[$IDX]} | sed -n "/^forge-1.12-14.21.1.2387-mdk\/gradle.cache\/caches\/modules-2\/files-2.1\/$REQ.jar$/p"` ]; then
-				[ ! -z $FOUND ] && { echo ${FOUND_LIBS[$IDX]}; echo "WARNING: duplicate library found for ["$( echo $REQ | tr -d '\\' )"]!"; break; }
-				FOUND=${FOUND_LIBS[$IDX]}
-				echo $FOUND
-				CLASSPATH=( ${CLASSPATH[@]} ${FOUND_LIBS[$IDX]} )
-				unset FOUND_LIBS[$IDX]
-			fi
-		done
-
-		[ -z $FOUND ] && echo "WARNING: required library ["$( echo $REQ | tr -d '\\' )"] not found!"
+		NR=${REQ%|*}
+		PATTERN=${REQ/[0-9]|/}
+		FOUND=( `echo ${FOUND_LIBS[@]} | tr ' ' ':' | perl -F":" -ane 'foreach (@F) { print "$_\n" if /^forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1\/'$PATTERN'$/; }'` )
+		for JAR in ${FOUND[@]}; do echo $JAR; done
+		if (( ! ${#FOUND[@]} )); then
+			echo "WARNING: required library ["$( echo $PATTERN | tr -d '\\' )"] not found!"
+		elif (( ${#FOUND[@]} != $NR )); then
+			echo "WARNING: duplicates found for library [$PATTERN]!"
+		fi
+		CLASSPATH=( ${CLASSPATH[@]} ${FOUND[@]} )
 	done
 	echo "DONE!"
-
-	# Leftovers ...
-	# echo ${FOUND_LIBS[@]} | tr ' ' '\n'
 
 	CLASSPATH=`echo ${CLASSPATH[@]} | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr ' ' ':'`
 	#CLASSPATH=`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" -print0 | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr '\000' ':'`
