@@ -43,7 +43,8 @@ DIRECTORY=""
 DOWNSTREAM=0
 UPSTREAM=0
 FORGE_VERSION=1.12-14.21.1.2387
-FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VERSION/snapshot/20170624
+SNAPSHOT_VERSION=20170624
+FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VERSION/snapshot/$SNAPSHOT_VERSION
 CLEAN=0
 while [ ! -z "$1" ]; do
 	case $1 in
