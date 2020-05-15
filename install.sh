@@ -42,10 +42,12 @@ esac
 DIRECTORY=""
 DOWNSTREAM=0
 UPSTREAM=0
-FORGE_VERSION=1.12-14.21.1.2387
-SNAPSHOT_VERSION=20170624
-FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VERSION/snapshot/$SNAPSHOT_VERSION
+FORGE_VERSION=1.14.4-28.2.0
+#SNAPSHOT_VERSION=20170624
+#FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VERSION/snapshot/$SNAPSHOT_VERSION
+FORGE_SNAPSHOT=gradle.cache/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.14.4-20190829.143755/joined
 CLEAN=0
+DEV=0
 while [ ! -z "$1" ]; do
 	case $1 in
 		-d | --directory )		shift
@@ -56,6 +58,8 @@ while [ ! -z "$1" ]; do
 		--upstream )			UPSTREAM=1
 								;;
 		--clean )				CLEAN=1
+								;;
+		--dev )					DEV=1
 								;;
 		-h | --help )			usage
 								exit 0
@@ -68,7 +72,7 @@ done
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=7
+INST_VERSION=8
 
 # (23) Failed writing body: 
 # https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
@@ -183,6 +187,8 @@ download_forge()
 {
 	[ -d mcp940 ] && { rm -rf mcp940 || error_exit; }
 
+	[ -d forge-1.12-14.21.1.2387-mdk ] && { rm -rf forge-1.12-14.21.1.2387-mdk || error_exit; }
+
 	# -----
 
 	if (( ! $CLEAN )); then
@@ -205,47 +211,29 @@ download_forge()
 prep_forge()
 {
 	if (( ! $CLEAN )); then
-		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ] && { echo "Preparing Minecraft sources :: SKIPPED"; return 0; }
+		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename.jar ] && { echo "Preparing Minecraft sources :: SKIPPED"; return 0; }
 	fi
 
 	# -----
 
 	cd forge-$FORGE_VERSION-mdk || error_exit
 
-	./gradlew -g gradle.cache :fixMcSources
+	./gradlew -g gradle.cache :compileJava
+
+	# merge assets and source
+	#
+	cp $FORGE_SNAPSHOT/rename/output.jar $FORGE_SNAPSHOT/rename/output_.jar || error_exit	
+
+	mkdir -p $FORGE_SNAPSHOT/downloadClient/_client || error_exit
+	pushd $FORGE_SNAPSHOT/downloadClient/_client || error_exit
+
+	jar xf ../client.jar assets data log4j2.xml META-INF pack.mcmeta pack.png version.json 
+	jar uf ../../rename/output_.jar *
 	
-	# Skip :applySourcePatches
-	#
-	cp $FORGE_SNAPSHOT/forge-$FORGE_VERSION-decompFixed.jar $FORGE_SNAPSHOT/forge-$FORGE_VERSION-patched.jar || error_exit
-
-	./gradlew -g gradle.cache :remapMcSources -x :deobfCompileDummyTask -x :deobfProvidedDummyTask -x :extractDependencyATs -x :extractMcpData -x :extractMcpMappings -x :getVersionJson -x :extractUserdev -x :genSrgs -x :downloadClient -x :downloadServer -x :splitServerJar -x :mergeJars -x :deobfMcSRG -x :decompileMc -x :fixMcSources -x :applySourcePatches # -x :remapMcSources -x :recompileMc
-
-	# patch source
-	#
-	[ -d $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources ] && { rm -rf $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources || error_exit; }
-	mkdir $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources || error_exit
-	pushd $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION-sources || error_exit
-	jar xf ../forgeSrc-$FORGE_VERSION-sources.jar
-
-	# here we don't want to apply any patches to the code that will break the :recompileMc task
-
-	# https://stackoverflow.com/questions/24821431/git-apply-patch-fails-silently-no-errors-but-nothing-happens
-	# Use: patch -p1 < path/file.patch
-
-	BROKEN_PACKETS_NO_LWJGL=forge-broken-packets-no-lwjgl.patch
-	echo == Downloading $BROKEN_PACKETS_NO_LWJGL ==
-	curl -f -o ./$BROKEN_PACKETS_NO_LWJGL -L $NET_DOWNLOAD/$NET_SHORT_VERSION/$BROKEN_PACKETS_NO_LWJGL || error_exit
-	echo Patching ...
-	git apply --stat --ignore-space-change -p1 --apply --reject ./$BROKEN_PACKETS_NO_LWJGL || error_exit
-
-	rm ../forgeSrc-$FORGE_VERSION-sources.jar
-	jar cf ../forgeSrc-$FORGE_VERSION-sources.jar *
 	popd
 
-	# :applySourcePatches is the task we definitely want to skip!
-	./gradlew -g gradle.cache :recompileMc -x :deobfCompileDummyTask -x :deobfProvidedDummyTask -x :extractDependencyATs -x :extractMcpData -x :extractMcpMappings -x :getVersionJson -x :extractUserdev -x :genSrgs -x :downloadClient -x :downloadServer -x :splitServerJar -x :mergeJars -x :deobfMcSRG -x :decompileMc -x :fixMcSources -x :applySourcePatches -x :remapMcSources # -x :recompileMc
-
-	[ ! -f $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ] && error_exit
+	mv $FORGE_SNAPSHOT/rename/output_.jar $FORGE_SNAPSHOT/rename.jar || error_exit
+	#[ ! -f $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ] && error_exit
 
 	cd ..
 }
@@ -483,6 +471,7 @@ cd "$MIM_DIR"/ || error_exit
 compile_jzmq_lib || error_exit
 download_forge || error_exit
 prep_forge || error_exit
+(( $DEV )) && exit 0
 download_mim || error_exit 
 generate_run_script || error_exit
 
