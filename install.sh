@@ -220,20 +220,48 @@ prep_forge()
 
 	./gradlew -g gradle.cache :compileJava
 
-	# merge assets and source
+	# merge assets (client.jar) and source (rename.jar)
 	#
 	cp $FORGE_SNAPSHOT/rename/output.jar $FORGE_SNAPSHOT/rename/output_.jar || error_exit	
 
+	if (( $DEV )); then
+		# jar tf mim-(up|down)stream.jar | grep "net/minecraft.*.class"
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/text/TextComponent.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/IPacket.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/NetworkManager\$1.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/NetworkManager\$2.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/NetworkManager\$QueuedPacket.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/NetworkManager.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/PacketBuffer.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/handshake/client/CHandshakePacket.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/play/server/SSpawnMobPacket.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/network/play/server/SSpawnPlayerPacket.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/text/StringTextComponent.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/text/TextFormatting.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/text/TranslationTextComponent.class
+	else
+		PATCH_JAR=patch.jar
+		echo == Downloading Minecraft patches ==
+		curl -f -o $FORGE_SNAPSHOT/rename/$PATCH_JAR -L $NET_DOWNLOAD/$NET_SHORT_VERSION/$PATCH_JAR || error_exit
+
+		mkdir -p $FORGE_SNAPSHOT/rename/patch || error_ext
+		pushd $FORGE_SNAPSHOT/rename/patch > /dev/null || error_exit
+		jar xf ../patch.jar
+
+		echo Patching sources ...
+		jar uf ../output_.jar *
+		popd > /dev/null
+	fi
+
 	mkdir -p $FORGE_SNAPSHOT/downloadClient/_client || error_exit
-	pushd $FORGE_SNAPSHOT/downloadClient/_client || error_exit
+	pushd $FORGE_SNAPSHOT/downloadClient/_client > /dev/null || error_exit
 
 	jar xf ../client.jar assets data log4j2.xml META-INF pack.mcmeta pack.png version.json 
 	jar uf ../../rename/output_.jar *
 	
-	popd
+	popd > /dev/null
 
 	mv $FORGE_SNAPSHOT/rename/output_.jar $FORGE_SNAPSHOT/rename.jar || error_exit
-	#[ ! -f $FORGE_SNAPSHOT/forgeSrc-$FORGE_VERSION.jar ] && error_exit
 
 	cd ..
 }
@@ -444,7 +472,7 @@ generate_run_script()
 	CLASSPATH=`echo ${CLASSPATH[@]} | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr ' ' ':'`
 	#CLASSPATH=`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" -print0 | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr '\000' ':'`
 
-	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/forgeSrc-'$FORGE_VERSION'.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$OUT
+	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/rename.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$OUT
 	if [[ $SIDE = "down" ]]; then
 		echo -n 'se.mitm.server.DedicatedServerProxy' >> ./$OUT
 	else
