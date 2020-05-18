@@ -339,6 +339,48 @@ generate_run_script()
 
 	echo "Gathering libraries ..."
 
+	# v1.14.4 runtime libs
+	#./ca/weblite/java-objc-bridge/1.0.0/java-objc-bridge-1.0.0-natives-osx.jar
+	#./ca/weblite/java-objc-bridge/1.0.0/java-objc-bridge-1.0.0.jar
+	#./com/google/code/gson/gson/2.8.0/gson-2.8.0.jar
+	#./com/google/guava/guava/21.0/guava-21.0.jar
+	#./com/ibm/icu/icu4j-core-mojang/51.2/icu4j-core-mojang-51.2.jar
+	#./com/mojang/authlib/1.5.25/authlib-1.5.25.jar
+	#./com/mojang/brigadier/1.0.17/brigadier-1.0.17.jar
+	#./com/mojang/datafixerupper/2.0.24/datafixerupper-2.0.24.jar
+	#./com/mojang/javabridge/1.0.22/javabridge-1.0.22.jar
+	#./com/mojang/patchy/1.1/patchy-1.1.jar
+	#./com/mojang/text2speech/1.11.3/text2speech-1.11.3.jar
+	#./commons-codec/commons-codec/1.10/commons-codec-1.10.jar
+	#./commons-io/commons-io/2.5/commons-io-2.5.jar
+	#./commons-logging/commons-logging/1.1.3/commons-logging-1.1.3.jar
+	#./io/netty/netty-all/4.1.25.Final/netty-all-4.1.25.Final.jar
+	#./it/unimi/dsi/fastutil/8.2.1/fastutil-8.2.1.jar
+	#./net/java/dev/jna/jna/4.4.0/jna-4.4.0.jar
+	#./net/java/dev/jna/platform/3.4.0/platform-3.4.0.jar
+	#./net/java/jinput/jinput/2.0.5/jinput-2.0.5.jar
+	#./net/java/jutils/jutils/1.0.0/jutils-1.0.0.jar
+	#./net/sf/jopt-simple/jopt-simple/5.0.3/jopt-simple-5.0.3.jar
+	#./org/apache/commons/commons-compress/1.8.1/commons-compress-1.8.1.jar
+	#./org/apache/commons/commons-lang3/3.5/commons-lang3-3.5.jar
+	#./org/apache/httpcomponents/httpclient/4.3.3/httpclient-4.3.3.jar
+	#./org/apache/httpcomponents/httpcore/4.3.2/httpcore-4.3.2.jar
+	#./org/apache/logging/log4j/log4j-api/2.8.1/log4j-api-2.8.1.jar
+	#./org/apache/logging/log4j/log4j-core/2.8.1/log4j-core-2.8.1.jar
+	#./org/lwjgl/lwjgl-glfw/3.2.1/lwjgl-glfw-3.2.1-natives-macos.jar
+	#./org/lwjgl/lwjgl-glfw/3.2.1/lwjgl-glfw-3.2.1.jar
+	#./org/lwjgl/lwjgl-jemalloc/3.2.1/lwjgl-jemalloc-3.2.1-natives-macos.jar
+	#./org/lwjgl/lwjgl-jemalloc/3.2.1/lwjgl-jemalloc-3.2.1.jar
+	#./org/lwjgl/lwjgl-openal/3.2.1/lwjgl-openal-3.2.1-natives-macos.jar
+	#./org/lwjgl/lwjgl-openal/3.2.1/lwjgl-openal-3.2.1.jar
+	#./org/lwjgl/lwjgl-opengl/3.2.1/lwjgl-opengl-3.2.1-natives-macos.jar
+	#./org/lwjgl/lwjgl-opengl/3.2.1/lwjgl-opengl-3.2.1.jar
+	#./org/lwjgl/lwjgl-stb/3.2.1/lwjgl-stb-3.2.1-natives-macos.jar
+	#./org/lwjgl/lwjgl-stb/3.2.1/lwjgl-stb-3.2.1.jar
+	#./org/lwjgl/lwjgl/3.2.1/lwjgl-3.2.1-natives-macos.jar
+	#./org/lwjgl/lwjgl/3.2.1/lwjgl-3.2.1.jar
+	#./oshi-project/oshi-core/1.1/oshi-core-1.1.jar
+	
 	declare -a REQUIRED_LIBS=(
 		"1|ca.weblite\/java-objc-bridge\/.*\.jar"
 		"1|com.google.code.findbugs\/jsr305\/.*\.jar"
@@ -346,23 +388,21 @@ generate_run_script()
 		"1|com.google.guava\/guava\/21.0\/.*\.jar"
 		"1|com.ibm.icu\/icu4j-core-mojang\/.*\.jar"
 		"1|com.mojang\/authlib\/.*\.jar"
+		"1|com.mojang\/brigadier\/.*\.jar"
+		"1|com.mojang\/datafixerupper\/.*\.jar"
+		"1|com.mojang\/javabridge\/.*\.jar"
 		"1|com.mojang\/patchy\/.*\.jar"
-		"1|com.mojang\/realms\/.*\.jar"
 		"1|com.mojang\/text2speech\/.*\.jar"
-		"1|com.paulscode\/codecjorbis\/.*\.jar"
-		"1|com.paulscode\/codecwav\/.*\.jar"
-		"1|com.paulscode\/libraryjavasound\/.*\.jar"
-		"1|com.paulscode\/librarylwjglopenal\/.*\.jar"
-		"1|com.paulscode\/soundsystem\/.*\.jar"
 		"1|commons-codec\/commons-codec\/1.10\/.*\.jar"
 		"1|commons-io\/commons-io\/2.5\/.*\.jar"
 		"1|commons-logging\/commons-logging\/.*\.jar"
 		"1|io.netty\/netty-all\/.*\.jar"
 		"1|it.unimi.dsi\/fastutil\/.*\.jar"
+		"1|net.minecraftforge\/eventbus\/.*\.jar"
+		#"1|org.gobbly-gook\/lib\/.*\.jar"
 		"1|net.java.dev.jna\/jna\/.*\.jar"
 		"1|net.java.dev.jna\/platform\/.*\.jar"
 		"1|net.java.jinput\/jinput\/.*\.jar"
-		"1|net.java.jinput\/jinput-platform\/.*$ARCH\.jar"
 		"1|net.java.jutils\/jutils\/.*\.jar"
 		"1|net.sf.jopt-simple\/jopt-simple\/.*\.jar"
 		"1|org.apache.commons\/commons-compress\/.*\.jar"
@@ -371,11 +411,17 @@ generate_run_script()
 		"1|org.apache.httpcomponents\/httpcore\/.*\.jar"
 		"1|org.apache.logging.log4j\/log4j-api\/.*\.jar"
 		"1|org.apache.logging.log4j\/log4j-core\/.*\.jar"
-		"1|org.lwjgl.lwjgl\/lwjgl\/.*\.jar"
-		"1|org.lwjgl.lwjgl\/lwjgl_util\/.*\.jar"
-		"1|org.lwjgl.lwjgl\/lwjgl-platform\/.*$ARCH\.jar"
+		#"1|org.lwjgl\/lwjgl-glfw\/.*(?<!$ARCH)\.jar"
+		#"1|org.lwjgl\/lwjgl-glfw\/.*$ARCH\.jar"
+		"2|org.lwjgl\/lwjgl-glfw\/.*\.jar"
+		"2|org.lwjgl\/lwjgl-jemalloc\/.*\.jar"
+		"2|org.lwjgl\/lwjgl-openal\/.*\.jar"
+		"2|org.lwjgl\/lwjgl-opengl\/.*\.jar"
+		"2|org.lwjgl\/lwjgl-stb\/.*\.jar"
+		"2|org.lwjgl\/lwjgl\/.*\.jar"
 		"1|oshi-project\/oshi-core\/.*\.jar"
 	)
+
 	declare -a FOUND_LIBS=(`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" `)
 
 	declare -a CLASSPATH=()
@@ -384,6 +430,7 @@ generate_run_script()
 		NR=${REQ%|*}
 		PATTERN=${REQ/[0-9]|/}
 		FOUND=( `echo ${FOUND_LIBS[@]} | tr ' ' ':' | perl -F":" -ane 'foreach (@F) { print "$_\n" if /^forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1\/'$PATTERN'$/; }'` )
+
 		for JAR in ${FOUND[@]}; do echo $JAR; done
 		if (( ! ${#FOUND[@]} )); then
 			echo "WARNING: required library ["$( echo $PATTERN | tr -d '\\' )"] not found!"
