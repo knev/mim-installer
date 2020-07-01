@@ -124,8 +124,8 @@ create_working_directory()
 	# -----
 
 	if (( ! $CLEAN )); then
-		(( ! $UPSTREAM )) && [[ -f "$MIM_DIR"/mim-downstream.jar ]] && { echo "Set up target directory :: SKIPPED"; echo "Upgrading ..."; return 0; } # redundant SIDE="down" 
-		(( ! $DOWNSTREAM )) && [[ -f "$MIM_DIR"/mim-upstream.jar ]] && { echo "Set up target directory :: SKIPPED"; echo "Upgrading ..."; SIDE="up"; return 0; }
+		(( ! $UPSTREAM )) && [[ -f "$MIM_DIR"/mim-downstream.jar ]] && { echo "Set up target directory ['$MIM_DIR'] :: SKIPPED"; echo "Upgrading ..."; return 0; } # redundant SIDE="down" 
+		(( ! $DOWNSTREAM )) && [[ -f "$MIM_DIR"/mim-upstream.jar ]] && { echo "Set up target directory ['$MIM_DIR'] :: SKIPPED"; echo "Upgrading ..."; SIDE="up"; return 0; }
 	fi
 
 	# -----
@@ -293,9 +293,11 @@ download_mim()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
+OUT=mim.sh
+[ $SIDE == "up" ] && OUT=mim-upstream.sh
+	
 generate_run_script() 
 {
-
 	if [ $SIDE == "up" ]; then
 		[ -f upstream.sh ] && { mv upstream.sh mim-upstream.sh~ || error_exit; }
 		[ -f proxy.properties ] && { mv proxy.properties mim-upstream.properties || error_exit; }
@@ -310,9 +312,6 @@ generate_run_script()
 
 	# -----
 
-	OUT=mim.sh
-	[ $SIDE == "up" ] && OUT=mim-upstream.sh
-	
 	echo "== Generating ["$SIDE"stream] run script =="
 	[ -f $OUT ] && { mv $OUT $OUT'~' || return 1; }
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
@@ -488,10 +487,6 @@ generate_run_script()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
-REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
-#REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
-
 check_java_version()
 {
 	echo 'JAVA_HOME='$JAVA_HOME'; '`java -version 2>&1 | head -n 1`
@@ -500,46 +495,64 @@ check_java_version()
 	[ "$JAVA_VERSION" == "1.8" ]
 }
 
-if [[ $ARCH == osx ]]; then
-	# https://stackoverflow.com/questions/21964709/how-to-set-or-change-the-default-java-jdk-version-on-os-x
-	export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
-	check_java_version || { echo JAVA_HOME is determined by \"/usr/libexec/java_home\"; error_msg "This install script requires Java JDK version 1.8"; }
-elif [[ $ARCH == linux ]]; then
-	# https://stackoverflow.com/questions/41059994/default-java-java-home-vs-sudo-update-alternatives-config-java
-	# https://unix.stackexchange.com/questions/212139/how-to-switch-java-environment-for-specific-process
-	[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH
-	if ! check_java_version; then
-		echo 'JAVA_HOME should point to the JDK root e.g., export JAVA_HOME="/usr/lib/jvm/openjdk-8-jdk"'
-		error_msg "This install script requires Java JDK version 1.8"
+check_pre_reqs()
+{
+	REQ=java; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
+	REQ=javac; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
+	#REQ=jar; which $REQ > /dev/null || error_msg "please install the Java JDK, [$REQ] not found"
+
+	if [[ $ARCH == osx ]]; then
+		# https://stackoverflow.com/questions/21964709/how-to-set-or-change-the-default-java-jdk-version-on-os-x
+		export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
+		check_java_version || { echo JAVA_HOME is determined by \"/usr/libexec/java_home\"; error_msg "This install script requires Java JDK version 1.8"; }
+	elif [[ $ARCH == linux ]]; then
+		# https://stackoverflow.com/questions/41059994/default-java-java-home-vs-sudo-update-alternatives-config-java
+		# https://unix.stackexchange.com/questions/212139/how-to-switch-java-environment-for-specific-process
+		[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH
+		if ! check_java_version; then
+			if [[ -f "$MIM_DIR"/$OUT ]]; then
+				echo "Java JDK version 1.8 check FAILED, adopting JAVA_HOME from ['$OUT']"
+				JAVA_HOME=`cat "$MIM_DIR"/$OUT | sed -nE '/^export JAVA_HOME=/p' | sed 's/^export JAVA_HOME="\(.*\)"/\1/' `
+				[ -n "JAVA_HOME" ] && export PATH=$JAVA_HOME/bin:$PATH
+				if ! check_java_version; then
+					echo 'JAVA_HOME should point to the JDK root e.g., export JAVA_HOME="/usr/lib/jvm/openjdk-8-jdk"'
+					error_msg "This install script requires Java JDK version 1.8"
+				fi
+			else
+				echo 'JAVA_HOME should point to the JDK root e.g., export JAVA_HOME="/usr/lib/jvm/openjdk-8-jdk"'
+				error_msg "This install script requires Java JDK version 1.8"
+			fi
+		fi
+	else
+		error_msg "Unknown Java JDK support for architecture: [$UNAME]"
 	fi
-else
-	error_msg "Unknown Java JDK support for architecture: [$UNAME]"
-fi
-
-REQ=g++; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
-REQ=git; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
-REQ=automake; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
-REQ=make; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
-REQ=pkg-config
-REQ=autoconf
-REQ=curl; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
-REQ=unzip; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
-
-REQ=libtool # (a mac version is preinstalled)
-if [[ $ARCH == osx ]]; then
-	which glibtool > /dev/null || error_msg "This install script requires [libtool] to be installed"
-fi
-
-#TODO host:/usr/local/opt/zmq$ [ -f include/zmq.h ] || echo "NO"
-if [[ $ARCH = osx ]]; then
-	REQ=zmq # ./configure will fail if not installed
-elif [[ $ARCH = linux ]]; then
-	REQ=libzmq3-dev # ./configure will fail if not installed
-fi
+	
+	REQ=g++; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
+	REQ=git; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
+	REQ=automake; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
+	REQ=make; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
+	REQ=pkg-config
+	REQ=autoconf
+	REQ=curl; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
+	REQ=unzip; which $REQ > /dev/null || error_msg "This install script requires [$REQ] to be installed"
+	
+	REQ=libtool # (a mac version is preinstalled)
+	if [[ $ARCH == osx ]]; then
+		which glibtool > /dev/null || error_msg "This install script requires [libtool] to be installed"
+	fi
+	
+	#TODO host:/usr/local/opt/zmq$ [ -f include/zmq.h ] || echo "NO"
+	if [[ $ARCH = osx ]]; then
+		REQ=zmq # ./configure will fail if not installed
+	elif [[ $ARCH = linux ]]; then
+		REQ=libzmq3-dev # ./configure will fail if not installed
+	fi
+}
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
 create_working_directory || error_exit
+check_pre_reqs || error_exit
 check_latest_mim_version || error_exit
 cd "$MIM_DIR"/ || error_exit
 
