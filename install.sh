@@ -72,7 +72,7 @@ done
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=8
+INST_VERSION=9
 
 # (23) Failed writing body: 
 # https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
@@ -253,6 +253,8 @@ prep_forge()
 		popd > /dev/null
 	fi
 
+	#TODO: jar -C <dir> // Temporarily changes directories to dir while processing the following inputfiles argument.  Multiple -C dir inputfiles sets are allowed.
+
 	mkdir -p $FORGE_SNAPSHOT/downloadClient/_client || error_exit
 	pushd $FORGE_SNAPSHOT/downloadClient/_client > /dev/null || error_exit
 
@@ -299,8 +301,11 @@ OUT=mim.sh
 generate_run_script() 
 {
 	if [ $SIDE == "up" ]; then
+		PROPERTIES=mim-upstream.properties
+
 		[ -f upstream.sh ] && { mv upstream.sh mim-upstream.sh~ || error_exit; }
-		[ -f proxy.properties ] && { mv proxy.properties mim-upstream.properties || error_exit; }
+		[ -f proxy.properties ] && { mv proxy.properties $PROPERTIES || error_exit; }
+		[ -f mim-upstream.properties ] && { mv $PROPERTIES $PROPERTIES~; sed 's/^minecraft-server-names=/aliases=/' < $PROPERTIES~ >$PROPERTIES; }
 	else
 		[ -f downstream.sh ] && { mv downstream.sh mim.sh~ || error_exit; }
 	fi
