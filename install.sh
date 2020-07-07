@@ -48,6 +48,7 @@ FORGE_VERSION=1.14.4-28.2.0
 FORGE_SNAPSHOT=gradle.cache/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.14.4-20190829.143755/joined
 CLEAN=0
 DEV=0
+REQ_VERSION=""
 while [ ! -z "$1" ]; do
 	case $1 in
 		-d | --directory )		shift
@@ -60,6 +61,9 @@ while [ ! -z "$1" ]; do
 		--clean )				CLEAN=1
 								;;
 		--dev )					DEV=1
+								;;
+		--req-version )			shift
+								REQ_VERSION=$1
 								;;
 		-h | --help )			usage
 								exit 0
@@ -200,14 +204,24 @@ check_pre_reqs()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
+JAR_VERSION=""
+NET_VERSION=""
 NET_DOWNLOAD=https://mitm.se/mim-install # curl has -L switch, so should be ok to leave off the www
 
 check_latest_mim_version()
 {
-	NET_VERSION=`curl -sfL $NET_DOWNLOAD/Version-mim-$SIDE'stream'.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
-	NET_SHORT_VERSION=`echo $NET_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
+	JAR_LONG_VERSION=`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' `
+	JAR_VERSION=`echo $JAR_LONG_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
 
-	[ -z "$NET_SHORT_VERSION" ] && error_msg "Unable to determine the latest version of MiM"
+	if [ -z $REQ_VERSION ]; then
+		NET_LONG_VERSION=`curl -sfL $NET_DOWNLOAD/Version-mim-$SIDE'stream'.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/'`
+		NET_VERSION=`echo $NET_LONG_VERSION | sed -nE '/^v[0-9]+.[0-9]+-[0-9]+-.*$/p' | sed 's/^\(v[0-9]*\.[0-9]*-[0-9]*\)-.*$/\1/'`
+	else
+		NET_VERSION=$REQ_VERSION
+		echo ! Requested version manually set to [$NET_VERSION]
+	fi
+
+	[ -z "$NET_VERSION" ] && error_msg "Unable to determine the latest version of MiM"
 
 	return 0; #TODO: required because something before sets the error
 }
@@ -306,7 +320,7 @@ prep_forge()
 	else
 		PATCH_JAR=patch.jar
 		echo == Downloading Minecraft patches ==
-		curl -f -o $FORGE_SNAPSHOT/rename/$PATCH_JAR -L $NET_DOWNLOAD/$NET_SHORT_VERSION/$PATCH_JAR || error_exit
+		curl -f -o $FORGE_SNAPSHOT/rename/$PATCH_JAR -L $NET_DOWNLOAD/$NET_VERSION/$PATCH_JAR || error_exit
 
 		mkdir -p $FORGE_SNAPSHOT/rename/patch || error_ext
 		pushd $FORGE_SNAPSHOT/rename/patch > /dev/null || error_exit
@@ -336,15 +350,15 @@ prep_forge()
 
 download_mim() 
 {
-	if (( ! $CLEAN )); then
+	if (( ! $CLEAN )) && [ -z $REQ_VERSION ]; then
 		if [ -f ./mim-$SIDE'stream.jar' ]; then
-			INST=( `java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
-			NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-$SIDE'stream.java' | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
-			UPGRADE=0; for NR in 0 1 2; do [ ${INST[$NR]} -lt ${NET[$NR]} ] && UPGRADE=1; done
+			JAR=( `echo $JAR_VERSION | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)$/\1 \2 \3/'` )
+			NET=( `echo $NET_VERSION | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)$/\1 \2 \3/'` )
+			UPGRADE=0; for NR in 0 1 2; do [ ${JAR[$NR]} -lt ${NET[$NR]} ] && UPGRADE=1; done
 
 			(( ! $UPGRADE )) && { echo "Download MiM-"$SIDE"stream component :: SKIPPED"; return 0; }
 
-			echo "MiM-downstream-v"${INST[0]}.${INST[1]}-${INST[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], upgrading ..."
+			echo "MiM-downstream-v"${JAR[0]}.${JAR[1]}-${JAR[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], upgrading ..."
 		fi
 	fi
 
@@ -352,7 +366,7 @@ download_mim()
 
 	echo "== Downloading MiM ["$SIDE"stream] component =="
 	[ -f ./mim-$SIDE'stream.jar' ] && { mv ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
-	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/$NET_SHORT_VERSION/mim-$SIDE'stream.jar' || return 1
+	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/$NET_VERSION/mim-$SIDE'stream.jar' || return 1A
 	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || retun 1
 	echo $SIDE"stream: "`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version`
 }
@@ -558,9 +572,9 @@ generate_run_script()
 
 create_working_directory || error_exit
 check_pre_reqs || error_exit
-check_latest_mim_version || error_exit
 cd "$MIM_DIR"/ || error_exit
 
+check_latest_mim_version || error_exit
 compile_jzmq_lib || error_exit
 download_forge || error_exit
 prep_forge || error_exit
