@@ -6,7 +6,7 @@ pause() {
 }
 
 usage() {
-	echo "usage: $0 [-d|--directory DIRECTORY] [--clean]"
+	echo "usage: $0 [-d|--directory DIRECTORY] [--local-upstream] [--clean] [-h|--help]"
 }
 
 error_msg() {
@@ -42,6 +42,7 @@ esac
 DIRECTORY=""
 DOWNSTREAM=0
 UPSTREAM=0
+LOCAL=0
 FORGE_VERSION=1.14.4-28.2.0
 #SNAPSHOT_VERSION=20170624
 #FORGE_SNAPSHOT=gradle.cache/caches/minecraft/net/minecraftforge/forge/$FORGE_VERSION/snapshot/$SNAPSHOT_VERSION
@@ -58,7 +59,12 @@ while [ ! -z "$1" ]; do
 								;;
 		--upstream )			UPSTREAM=1
 								;;
+		--local )				LOCAL=1
+								;;
 		--clean )				CLEAN=1
+								;;
+		--local-upstream )		UPSTREAM=1
+								LOCAL=1
 								;;
 		--dev )					DEV=1
 								;;
@@ -373,17 +379,12 @@ download_mim()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-OUT=mim.sh
-[ $SIDE == "up" ] && OUT=mim-upstream.sh
-	
 generate_run_script() 
 {
 	if [ $SIDE == "up" ]; then
-		PROPERTIES=mim-upstream.properties
-
 		[ -f upstream.sh ] && { mv upstream.sh mim-upstream.sh~ || error_exit; }
 		[ -f proxy.properties ] && { mv proxy.properties $PROPERTIES || error_exit; }
-		[ -f mim-upstream.properties ] && { mv $PROPERTIES $PROPERTIES~; sed 's/^minecraft-server-names=/aliases=/' < $PROPERTIES~ >$PROPERTIES; }
+		[ -f mim-upstream.properties ] && { mv mim-upstream.properties mim-upstream.properties~; sed 's/^minecraft-server-names=/aliases=/' < mim-upstream.properties~ >mim-upstream.properties; }
 	else
 		[ -f downstream.sh ] && { mv downstream.sh mim.sh~ || error_exit; }
 	fi
@@ -396,6 +397,26 @@ generate_run_script()
 	# -----
 
 	echo "== Generating ["$SIDE"stream] run script =="
+
+	OUT=mim.sh
+		
+	if [ $SIDE == "up" ]; then
+		OUT=mim-upstream.sh
+		PROPERTIES=mim-upstream.properties
+
+		if (( $LOCAL )); then
+			OUT=mim-upstream-local.sh
+
+			echo "Generating local-upstream properties"
+
+			echo 'addr=0.0.0.0' > $PROPERTIES
+			echo 'port=4499' >> $PROPERTIES
+			echo 'aliases=localhost' >> $PROPERTIES	
+		fi
+	fi
+
+	# -----
+
 	[ -f $OUT ] && { mv $OUT $OUT'~' || return 1; }
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
 	echo '#!/bin/bash' > $OUT
@@ -556,9 +577,10 @@ generate_run_script()
 
 	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/rename.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$OUT
 	if [[ $SIDE = "down" ]]; then
-		echo -n 'se.mitm.server.DedicatedServerProxy' >> ./$OUT
+		echo -n 'se.mitm.server.DedicatedServerProxy ' >> ./$OUT
 	else
-		echo -n 'se.mitm.client.MinecraftClientProxy' >> ./$OUT
+		echo -n 'se.mitm.client.MinecraftClientProxy ' >> ./$OUT
+		(( $LOCAL )) && echo -n '--local-upstream=true ' >> ./$OUT
 	fi
 	# https://unix.stackexchange.com/questions/108635/why-i-cant-escape-spaces-on-a-bash-script/108663#108663
 	echo ' $ARGS' >> ./$OUT
