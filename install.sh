@@ -409,9 +409,8 @@ generate_run_script()
 
 			echo "Generating local-upstream properties"
 
-			echo 'addr=0.0.0.0' > $PROPERTIES
+			echo 'addr=127.0.0.1' > $PROPERTIES
 			echo 'port=4499' >> $PROPERTIES
-			echo 'aliases=localhost' >> $PROPERTIES	
 		fi
 	fi
 
