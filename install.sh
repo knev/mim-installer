@@ -364,7 +364,7 @@ download_mim()
 
 			(( ! $UPGRADE )) && { echo "Download MiM-"$SIDE"stream component :: SKIPPED"; return 0; }
 
-			echo "MiM-downstream-v"${JAR[0]}.${JAR[1]}-${JAR[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], upgrading ..."
+			echo "MiM-"$SIDE"stream-v"${JAR[0]}.${JAR[1]}-${JAR[2]}" installed, latest [v"${NET[0]}.${NET[1]}-${NET[2]}"], upgrading ..."
 		fi
 	fi
 
