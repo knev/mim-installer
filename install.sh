@@ -61,10 +61,10 @@ while [ ! -z "$1" ]; do
 								;;
 		--local )				LOCAL=1
 								;;
-		--clean )				CLEAN=1
-								;;
 		--local-upstream )		UPSTREAM=1
 								LOCAL=1
+								;;
+		--clean )				CLEAN=1
 								;;
 		--dev )					DEV=1
 								;;
@@ -431,9 +431,17 @@ generate_run_script()
 	#
 	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $OUT
 
-	# while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-upstream.jar se.mitm.version.Version`; exit 0; }; shift; done
+	# while [ ! -z "$1" ]; do 
+	#	[ "$1" == "--version" ] && { echo `java -classpath mim-downstream.jar se.mitm.version.Version`; exit 0; }; 
+	#	[ "$1" == "--upgrade" ] && { curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh; /bin/bash install.sh; rm install.sh; exit 0; }; 
+	#	shift; 
+	# done
 	#
-	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; shift; done'$'\n' >> $OUT
+	if [ $SIDE == "up" ]; then
+		SWITCH="--upstream"
+		(( $LOCAL )) && SWITCH="--local-upstream"
+	fi
+	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; [ "$1" == "--upgrade" ] && { curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh; /bin/bash install.sh '$SWITCH'; rm install.sh; exit 0; }; shift; done'$'\n' >> $OUT
 	
 	# INST=( `java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
 	# NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-downstream.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
