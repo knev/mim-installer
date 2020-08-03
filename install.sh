@@ -136,8 +136,12 @@ create_working_directory()
 	# -----
 
 	if (( ! $CLEAN )); then
-		(( ! $UPSTREAM )) && [[ -f "$MIM_DIR"/mim-downstream.jar ]] && { echo "Set up target directory ['$MIM_DIR'] :: SKIPPED"; echo "Upgrading ..."; return 0; } # redundant SIDE="down" 
-		(( ! $DOWNSTREAM )) && [[ -f "$MIM_DIR"/mim-upstream.jar ]] && { echo "Set up target directory ['$MIM_DIR'] :: SKIPPED"; echo "Upgrading ..."; SIDE="up"; return 0; }
+		if (( $UPSTREAM )); then
+			[[ -f "$MIM_DIR"/mim-upstream.jar ]] && { echo "Set up target directory ['$MIM_DIR'] :: SKIPPED"; echo "Upgrading ..."; return 0; } # redundant SIDE="up"
+		else
+			(( $LOCAL )) && [[ -f "$MIM_DIR"/mim-upstream.jar ]] && { echo "Set up target directory ['$MIM_DIR'] :: SKIPPED"; echo "Upgrading ..."; SIDE="up"; return 0; }
+			[[ -f "$MIM_DIR"/mim-downstream.jar ]] && { echo "Set up target directory ['$MIM_DIR'] :: SKIPPED"; echo "Upgrading ..."; return 0; } # redundant SIDE="down" 
+		fi
 	fi
 
 	# -----
@@ -373,9 +377,9 @@ download_mim()
 	# -----
 
 	echo "== Downloading MiM ["$SIDE"stream] component =="
-	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/$NET_VERSION/mim-$SIDE'stream.jar' || return 1A
+	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/$NET_VERSION/mim-$SIDE'stream.jar' || return 1
 	[ -f ./mim-$SIDE'stream.jar' ] && { mv ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
-	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || retun 1
+	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || return 1
 	echo $SIDE"stream: "`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version`
 }
 
