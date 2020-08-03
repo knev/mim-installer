@@ -371,8 +371,8 @@ download_mim()
 	# -----
 
 	echo "== Downloading MiM ["$SIDE"stream] component =="
-	[ -f ./mim-$SIDE'stream.jar' ] && { mv ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
 	curl -f -o ./mim-$SIDE'stream.jar.tmp' -L $NET_DOWNLOAD/$NET_VERSION/mim-$SIDE'stream.jar' || return 1A
+	[ -f ./mim-$SIDE'stream.jar' ] && { mv ./mim-$SIDE'stream.jar' ./mim-$SIDE'stream.jar~' || return 1; }
 	mv ./mim-$SIDE'stream.jar.tmp' ./mim-$SIDE'stream.jar' || retun 1
 	echo $SIDE"stream: "`java -classpath mim-$SIDE'stream.jar' se.mitm.version.Version`
 }
