@@ -64,6 +64,8 @@ while [ ! -z "$1" ]; do
 		--local-upstream )		UPSTREAM=1
 								LOCAL=1
 								;;
+		--upgrade )				CLEAN=0;
+								;;
 		--clean )				CLEAN=1
 								;;
 		--dev )					DEV=1
