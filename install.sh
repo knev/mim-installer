@@ -569,7 +569,7 @@ generate_run_script()
 		PATTERN=${REQ/[0-9]|/}
 		FOUND=( `echo ${FOUND_LIBS[@]} | tr ' ' ':' | perl -F":" -ane 'foreach (@F) { print "$_\n" if /^forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1\/'$PATTERN'$/; }'` )
 
-		for JAR in ${FOUND[@]}; do echo $JAR; done
+		# for JAR in ${FOUND[@]}; do echo $JAR; done
 		if (( ! ${#FOUND[@]} )); then
 			echo "WARNING: required library ["$( echo $PATTERN | tr -d '\\' )"] not found!"
 		elif (( ${#FOUND[@]} != $NR )); then
