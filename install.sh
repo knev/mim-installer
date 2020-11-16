@@ -365,6 +365,22 @@ prep_forge()
 
 download_mim() 
 {
+	if [ $SIDE == "up" ]; then
+		PROPERTIES=mim-upstream.properties
+
+		[ -f proxy.properties ] && { mv proxy.properties $PROPERTIES || error_exit; }
+		[ -f mim-upstream.properties ] && { mv mim-upstream.properties mim-upstream.properties~; sed 's/^minecraft-server-names=/aliases=/' < mim-upstream.properties~ >mim-upstream.properties; }
+
+		if (( $LOCAL )); then
+			echo "Generating local-upstream properties"
+
+			echo 'addr=127.0.0.1' > $PROPERTIES
+			echo 'port=4499' >> $PROPERTIES
+		fi
+	fi
+
+	# -----
+
 	if (( ! $CLEAN )) && [ -z $REQ_VERSION ]; then
 		if [ -f ./mim-$SIDE'stream.jar' ]; then
 			JAR=( `echo $JAR_VERSION | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)$/\1 \2 \3/'` )
@@ -392,8 +408,6 @@ generate_run_script()
 {
 	if [ $SIDE == "up" ]; then
 		[ -f upstream.sh ] && { mv upstream.sh mim-upstream.sh~ || error_exit; }
-		[ -f proxy.properties ] && { mv proxy.properties $PROPERTIES || error_exit; }
-		[ -f mim-upstream.properties ] && { mv mim-upstream.properties mim-upstream.properties~; sed 's/^minecraft-server-names=/aliases=/' < mim-upstream.properties~ >mim-upstream.properties; }
 	else
 		[ -f downstream.sh ] && { mv downstream.sh mim.sh~ || error_exit; }
 	fi
@@ -411,16 +425,7 @@ generate_run_script()
 		
 	if [ $SIDE == "up" ]; then
 		OUT=mim-upstream.sh
-		PROPERTIES=mim-upstream.properties
-
-		if (( $LOCAL )); then
-			OUT=mim-upstream-local.sh
-
-			echo "Generating local-upstream properties"
-
-			echo 'addr=127.0.0.1' > $PROPERTIES
-			echo 'port=4499' >> $PROPERTIES
-		fi
+		(( $LOCAL )) && OUT=mim-upstream-local.sh
 	fi
 
 	# -----
