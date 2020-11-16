@@ -113,7 +113,8 @@ fi
 MIM_DIR=MiM
 SIDE="down"
 #(( $DOWNSTREAM )) && { MIM_DIR=MiM; SIDE="down"; } Default !
-(( $UPSTREAM )) && { MIM_DIR=MiM-upstream; SIDE="up"; }
+(( $UPSTREAM )) && SIDE="up"
+(( $UPSTREAM )) && (( !$LOCAL )) && MIM_DIR=MiM-upstream
 
 create_working_directory() 
 {
