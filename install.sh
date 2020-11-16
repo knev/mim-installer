@@ -243,6 +243,8 @@ check_latest_mim_version()
 
 compile_jzmq_lib()
 {
+	[ -f /usr/local/lib/libjzmq.a ] && { echo "Compile Java binding for zmq :: SKIPPED"; return 0; }
+
 	if (( ! $CLEAN )); then
 		[ -f libs/libjzmq.a ] && { echo "Compile Java binding for zmq :: SKIPPED"; return 0; }
 	fi 
@@ -440,7 +442,7 @@ generate_run_script()
 
 	# while [ ! -z "$1" ]; do 
 	#	[ "$1" == "--version" ] && { echo `java -classpath mim-downstream.jar se.mitm.version.Version`; exit 0; }; 
-	#	[ "$1" == "--upgrade" ] && { curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh; /bin/bash install.sh; rm install.sh; exit 0; }; 
+	#	[ "$1" == "--upgrade" ] && { curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh; /bin/bash install.sh -d .; rm install.sh; exit 0; }; 
 	#	shift; 
 	# done
 	#
@@ -448,7 +450,7 @@ generate_run_script()
 		SWITCH="--upstream"
 		(( $LOCAL )) && SWITCH="--local-upstream"
 	fi
-	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; [ "$1" == "--upgrade" ] && { curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh; /bin/bash install.sh '$SWITCH'; rm install.sh; exit 0; }; shift; done'$'\n' >> $OUT
+	echo 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; [ "$1" == "--upgrade" ] && { curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh; /bin/bash install.sh -d . '$SWITCH'; rm install.sh; exit 0; }; shift; done'$'\n' >> $OUT
 	
 	# INST=( `java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
 	# NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-downstream.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
@@ -589,7 +591,10 @@ generate_run_script()
 	CLASSPATH=`echo ${CLASSPATH[@]} | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr ' ' ':'`
 	#CLASSPATH=`find forge-$FORGE_VERSION-mdk/gradle.cache/caches/modules-2/files-2.1 -type f -name "*.jar" -print0 | sed 's/forge-'$FORGE_VERSION'-mdk\/gradle.cache\/caches\/modules-2\/files-2.1/$LIB/g' | tr '\000' ':'`
 
-	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'\$MiM'/libs"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/rename.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$OUT
+	LIB_PATH=\$MiM'/libs'
+	[ -f /usr/local/lib/libjzmq.a ] && LIB_PATH='/usr/local/lib'
+
+	echo -n 'java -Xms1G -Xmx1G' '-Djava.library.path="'$LIB_PATH'"' '-classpath "'$CLASSPATH':$MiM/forge-'$FORGE_VERSION'-mdk/'$FORGE_SNAPSHOT'/rename.jar:$MiM/mim-'$SIDE'stream.jar" ' >> ./$OUT
 	if [[ $SIDE = "down" ]]; then
 		echo -n 'se.mitm.server.DedicatedServerProxy ' >> ./$OUT
 	else
