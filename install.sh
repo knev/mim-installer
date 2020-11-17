@@ -176,7 +176,7 @@ docker_build_image()
 
 	echo '== Building Docker image =='
 	mkdir -p $DOCKER_CONTEXT
-	#curl -f --silent -o $DOCKER_CONTEXT/Dockerfile -L https://raw.githubusercontent.com/knev/mim-installer/master/Dockerfile-$DOCKER_IMAGE
+	curl -f --silent -o $DOCKER_CONTEXT/Dockerfile -L https://raw.githubusercontent.com/knev/mim-installer/master/Dockerfile-$DOCKER_IMAGE
 	docker build -t $DOCKER_IMAGE $DOCKER_CONTEXT
 }
 
@@ -196,7 +196,7 @@ generate_docker_compose()
 	OUT=docker-compose.yml
 	[ -f $OUT ] && { mv $OUT $OUT'~' || return 1; }
 
-	echo '== Writing ['$OUT'] script =='
+	echo '== Writing ['$OUT'] for ['$DOCKER_MIM_DIR'] =='
 
 	# version: "2.4"
 	# services:
@@ -223,12 +223,18 @@ generate_docker_compose()
 	echo '    volumes:' >> $OUT
 	echo '      - "'$PWD':/home/mitm/'$DOCKER_MIM_DIR'"' >> $OUT
 	
-	#TODO: need to determine what address is the Minecraft directory on host
-	if [ $SIDE == "down" ]; then
-	echo '      - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"' >> $OUT
+	if [[ $ARCH = osx ]]; then
+		MINECRAFT_HOME=`echo ~/Library/Application Support/minecraft`
+	elif [[ $ARCH = linux ]]; then
+		MINECRAFT_HOME=`echo ~/.minecraft`
 	fi
 
-	echo '"services: mim: ... " >> ./'$OUT
+	if [ $SIDE == "down" ]; then
+		[[ -d "$MINECRAFT_HOME" ]] || error_msg "Can not find the Minecraft folder at [$MINECRAFT_HOME]"
+		echo '      - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"' >> $OUT
+	fi
+
+	echo '"services: '$DOCKER_IMAGE': ... " >> ./'$OUT
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
