@@ -156,14 +156,30 @@ create_working_directory()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-docker_build()
+docker_build_image()
 {
 	REQ=docker; which $REQ > /dev/null || error_msg "please install the Docker, [$REQ] not found"
 
-	echo '== Building Docker image =='
-	#curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
-	docker build -t mim docker
+	DOCKER_IMAGE=mim
+	DOCKER_CONTEXT=docker
 
+	if (( $CLEAN )); then
+		docker rmi -f $DOCKER_IMAGE
+	else
+		docker inspect --type=image $DOCKER_IMAGE >/dev/null && { echo "Building Docker image :: SKIPPED"; return 0; }
+	fi
+
+	echo '== Building Docker image =='
+	mkdir -p $DOCKER_CONTEXT
+	curl -f --silent -o $DOCKER_CONTEXT/Dockerfile -L https://raw.githubusercontent.com/knev/mim-installer/master/Dockerfile-mim
+	docker build -t $DOCKER_IMAGE $DOCKER_CONTEXT
+
+	rm $DOCKER_CONTEXT/Dockerfile
+	rmdir $DOCKER_CONTEXT
+}
+
+docker_cp()
+{
 	if (( ! $CLEAN )); then
 		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename.jar ] && { echo "Extracting runtime to writeable volume :: SKIPPED"; return 0; }
 	fi
@@ -676,7 +692,8 @@ create_working_directory || error_exit
 cd "$MIM_DIR"/ || error_exit
 
 if (( $DOCKER )); then
-	docker_build || error_exit
+	docker_build_image || error_exit
+	docker_cp || error_exit
 	generate_docker_compose || error_exit
 	exit 0
 fi
