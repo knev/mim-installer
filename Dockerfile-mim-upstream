@@ -1,0 +1,17 @@
+FROM ubuntu:18.04
+RUN apt-get update && apt-get install -y curl openjdk-8-jdk make automake autoconf pkg-config libtool unzip git libzmq3-dev g++
+
+RUN git clone https://github.com/zeromq/jzmq.git /opt/jzmq.git 
+WORKDIR /opt/jzmq.git/jzmq-jni
+RUN mv configure.in configure.ac && ./autogen.sh && ./configure && make && make install
+
+RUN useradd --no-log-init -r -m -U -d /home/mitm mitm
+USER mitm
+WORKDIR /home/mitm
+
+RUN curl -o install.sh -fsSL https://raw.githubusercontent.com/knev/mim-installer/master/install.sh && chmod +x install.sh 
+RUN ./install.sh -d MiM-upstream --upstream
+
+WORKDIR /home/mitm/MiM-upstream
+ENTRYPOINT ["./mim-upstream.sh"]
+

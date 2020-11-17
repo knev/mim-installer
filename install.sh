@@ -21,6 +21,8 @@ error_exit() {
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
+# set -x
+
 # https://stackoverflow.com/questions/394230/how-to-detect-the-os-from-a-bash-script
 #if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
@@ -156,11 +158,14 @@ create_working_directory()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
+DOCKER_MIM_DIR=MiM
+(( $UPSTREAM )) && DOCKER_MIM_DIR=MiM-upstream
+DOCKER_IMAGE=`echo $DOCKER_MIM_DIR | tr '[:upper:]' '[:lower:]'`
+
 docker_build_image()
 {
 	REQ=docker; which $REQ > /dev/null || error_msg "please install the Docker, [$REQ] not found"
 
-	DOCKER_IMAGE=mim
 	DOCKER_CONTEXT=docker
 
 	if (( $CLEAN )); then
@@ -171,11 +176,8 @@ docker_build_image()
 
 	echo '== Building Docker image =='
 	mkdir -p $DOCKER_CONTEXT
-	curl -f --silent -o $DOCKER_CONTEXT/Dockerfile -L https://raw.githubusercontent.com/knev/mim-installer/master/Dockerfile-mim
+	#curl -f --silent -o $DOCKER_CONTEXT/Dockerfile -L https://raw.githubusercontent.com/knev/mim-installer/master/Dockerfile-$DOCKER_IMAGE
 	docker build -t $DOCKER_IMAGE $DOCKER_CONTEXT
-
-	rm $DOCKER_CONTEXT/Dockerfile
-	rmdir $DOCKER_CONTEXT
 }
 
 docker_cp()
@@ -186,7 +188,7 @@ docker_cp()
 
 	echo '== Extracting runtime to writeable volume ==' 
 	#https://stackoverflow.com/questions/25292198/docker-how-can-i-copy-a-file-from-an-image-to-a-host
-	docker cp $(docker create mim):/home/mitm/MiM ..
+	docker cp $(docker create $DOCKER_IMAGE):/home/mitm/$DOCKER_MIM_DIR ..
 }
 
 generate_docker_compose()
@@ -206,17 +208,25 @@ generate_docker_compose()
 	#     volumes:
 	#       - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"
 	#       - "/Users/dev/Metaverse/mim-installer.git/MiM:/home/mitm/MiM"
+
+
+	MIM_PORT=25511
+	[ $SIDE == "up" ] && MIM_PORT=4999
 	
 	echo 'version: "2.4"' > $OUT
 	echo 'services:' >> $OUT
-	echo '  mim:' >> $OUT
-	echo '    image: mim' >> $OUT
-	echo '    container_name: mim' >> $OUT
+	echo '  '$DOCKER_IMAGE':' >> $OUT
+	echo '    image: '$DOCKER_IMAGE >> $OUT
+	echo '    container_name: '$DOCKER_IMAGE >> $OUT
 	echo '    ports:' >> $OUT
-	echo '      - "25511:25511"' >> $OUT
+	echo '      - "'$MIM_PORT':'$MIM_PORT'"' >> $OUT
 	echo '    volumes:' >> $OUT
+	echo '      - "'$PWD':/home/mitm/'$DOCKER_MIM_DIR'"' >> $OUT
+	
+	#TODO: need to determine what address is the Minecraft directory on host
+	if [ $SIDE == "down" ]; then
 	echo '      - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"' >> $OUT
-	echo '      - "'$PWD'/home/mitm/MiM"' >> $OUT
+	fi
 
 	echo '"services: mim: ... " >> ./'$OUT
 }
