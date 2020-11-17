@@ -49,6 +49,7 @@ FORGE_VERSION=1.14.4-28.2.0
 FORGE_SNAPSHOT=gradle.cache/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_config/1.14.4-20190829.143755/joined
 CLEAN=0
 DEV=0
+DOCKER=0
 REQ_VERSION=""
 while [ ! -z "$1" ]; do
 	case $1 in
@@ -70,6 +71,8 @@ while [ ! -z "$1" ]; do
 								;;
 		--dev )					DEV=1
 								;;
+		--docker )				DOCKER=1
+								;;
 		--req-version )			shift
 								REQ_VERSION=$1
 								;;
@@ -84,7 +87,7 @@ done
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-INST_VERSION=9
+INST_VERSION=10
 
 # (23) Failed writing body: 
 # https://stackoverflow.com/questions/16703647/why-does-curl-return-error-23-failed-writing-body
@@ -149,6 +152,57 @@ create_working_directory()
 
 	echo 'Setting up target directory: ['$MIM_DIR'] ...'
 	mkdir -p "$MIM_DIR" || error_msg 'failed to make target directory: ['$MIM_DIR']'
+}
+
+#--------------------------------------------------------------------------------------------------------------------------------
+
+docker_build()
+{
+	REQ=docker; which $REQ > /dev/null || error_msg "please install the Docker, [$REQ] not found"
+
+	echo '== Building Docker image =='
+	#curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh
+	docker build -t mim docker
+
+	if (( ! $CLEAN )); then
+		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename.jar ] && { echo "Extracting runtime to writeable volume :: SKIPPED"; return 0; }
+	fi
+
+	echo '== Extracting runtime to writeable volume ==' 
+	#https://stackoverflow.com/questions/25292198/docker-how-can-i-copy-a-file-from-an-image-to-a-host
+	docker cp $(docker create mim):/home/mitm/MiM ..
+}
+
+generate_docker_compose()
+{
+	OUT=docker-compose.yml
+	[ -f $OUT ] && { mv $OUT $OUT'~' || return 1; }
+
+	echo '== Writing ['$OUT'] script =='
+
+	# version: "2.4"
+	# services:
+	#   mim:
+	#     image: mim
+	#     container_name: mim
+	#     ports: 
+	#       - "25511:25511"
+	#     volumes:
+	#       - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"
+	#       - "/Users/dev/Metaverse/mim-installer.git/MiM:/home/mitm/MiM"
+	
+	echo 'version: "2.4"' > $OUT
+	echo 'services:' >> $OUT
+	echo '  mim:' >> $OUT
+	echo '    image: mim' >> $OUT
+	echo '    container_name: mim' >> $OUT
+	echo '    ports:' >> $OUT
+	echo '      - "25511:25511"' >> $OUT
+	echo '    volumes:' >> $OUT
+	echo '      - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"' >> $OUT
+	echo '      - "'$PWD'/home/mitm/MiM"' >> $OUT
+
+	echo '"services: mim: ... " >> ./'$OUT
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -616,9 +670,16 @@ generate_run_script()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-create_working_directory || error_exit
 check_pre_reqs || error_exit
+
+create_working_directory || error_exit
 cd "$MIM_DIR"/ || error_exit
+
+if (( $DOCKER )); then
+	docker_build || error_exit
+	generate_docker_compose || error_exit
+	exit 0
+fi
 
 check_latest_mim_version || error_exit
 compile_jzmq_lib || error_exit
