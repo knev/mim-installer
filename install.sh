@@ -165,6 +165,7 @@ DOCKER_IMAGE=`echo $DOCKER_MIM_DIR | tr '[:upper:]' '[:lower:]'`
 docker_build_image()
 {
 	REQ=docker; which $REQ > /dev/null || error_msg "please install the Docker, [$REQ] not found"
+	REQ=docker-compose; which $REQ > /dev/null || error_msg "please install the Docker, [$REQ] not found"
 
 	DOCKER_CONTEXT=docker
 
@@ -189,6 +190,20 @@ docker_cp()
 	echo '== Extracting runtime to writeable volume ==' 
 	#https://stackoverflow.com/questions/25292198/docker-how-can-i-copy-a-file-from-an-image-to-a-host
 	docker cp $(docker create $DOCKER_IMAGE):/home/mitm/$DOCKER_MIM_DIR ..
+
+	if [[ $ARCH = linux ]]; then
+		DOCKER_USER_GROUP=docker
+
+		DOCKER_GROUP=`less /etc/group | cut -d: -f1 | grep $DOCKER_USER_GROUP`
+		[[ -n $DOCKER_GROUP ]] || error_msg "the ['$DOCKER_USER_GROUP'] user group doesn't exist, but is required under linux"
+
+		USER_DOCKER=`groups | sed -nE '/'$DOCKER_USER_GROUP'/p'`
+		[[ -n $USER_DOCKER ]] || error_msg "you are currenly not a member of the ['$DOCKER_USER_GROUP'] user group"
+
+		chown -R :$DOCKER_USER_GROUP .
+
+		chmod -R g+w .
+	fi
 }
 
 generate_docker_compose()
@@ -198,7 +213,7 @@ generate_docker_compose()
 
 	echo '== Writing ['$OUT'] for ['$DOCKER_MIM_DIR'] =='
 
-	# version: "2.4"
+	# version: "2.2"
 	# services:
 	#   mim:
 	#     image: mim
@@ -213,7 +228,8 @@ generate_docker_compose()
 	MIM_PORT=25511
 	[ $SIDE == "up" ] && MIM_PORT=4999
 	
-	echo 'version: "2.4"' > $OUT
+	# use version 2.2, because 2.4 freaks out under Ubuntu
+	echo 'version: "2.2"' > $OUT
 	echo 'services:' >> $OUT
 	echo '  '$DOCKER_IMAGE':' >> $OUT
 	echo '    image: '$DOCKER_IMAGE >> $OUT
@@ -527,9 +543,12 @@ generate_run_script()
 	# http://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
 	#
 
-	# [ -f mim-downstream.jar ] || { echo "File [mim-downstream.jar] not found. Abort."; exit 1; }
-	#
-	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found. Abort."; exit 1; }'$'\n' >> $OUT
+	# [ -f mim-downstream.jar ] || { echo "File [mim-downstream.jar] not found."; echo "Abort."; exit 1; }
+	# grep -qa docker /proc/1/cgroup 2>/dev/null || { echo "Use [docker-compose] instead."; echo "Abort."; exit 1; }
+
+	# https://stackoverflow.com/questions/20010199/how-to-determine-if-a-process-runs-inside-lxc-docker
+	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found."; echo "Abort."; exit 1; }' >> $OUT
+	echo '[ -f docker-compose.yml ] && ! grep -qa docker /proc/1/cgroup 2>/dev/null && { echo "Use [docker-compose] instead."; echo "Abort."; exit 1; }'$'\n' >> $OUT
 
 	# while [ ! -z "$1" ]; do 
 	#	[ "$1" == "--version" ] && { echo `java -classpath mim-downstream.jar se.mitm.version.Version`; exit 0; }; 
