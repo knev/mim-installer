@@ -491,8 +491,6 @@ download_mim()
 		[ -f mim-upstream.properties ] && { mv mim-upstream.properties mim-upstream.properties~; sed 's/^minecraft-server-names=/aliases=/' < mim-upstream.properties~ >mim-upstream.properties; }
 
 		if (( $LOCAL )); then
-			echo "Generating local-upstream properties"
-
 			echo 'addr=0.0.0.0' > $PROPERTIES
 			echo 'port=4499' >> $PROPERTIES
 		fi
@@ -538,7 +536,9 @@ generate_run_script()
 
 	# -----
 
-	echo "== Generating ["$SIDE"stream] run script =="
+	PREFIX=''
+	(( $LOCAL )) && PREFIX='local-'
+	echo "== Generating ["$PREFIX$SIDE"stream] run script =="
 
 	OUT=mim.sh
 		
@@ -757,6 +757,15 @@ prep_forge || error_exit
 (( $DEV )) && exit 0
 download_mim || error_exit 
 generate_run_script || error_exit
+
+if [[ $SIDE = "down" ]]; then
+	LOCAL=1
+	UPSTREAM=1
+	SIDE="up"
+
+	download_mim || error_exit 
+	generate_run_script || error_exit
+fi
 
 cd ..
 
