@@ -213,44 +213,61 @@ generate_docker_compose()
 
 	echo '== Writing ['$OUT'] for ['$DOCKER_MIM_DIR'] =='
 
-	# version: "2.2"
-	# services:
-	#   mim:
-	#     image: mim
-	#     container_name: mim
-	#     ports: 
-	#       - "25511:25511"
-	#     volumes:
-	#       - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"
-	#       - "/Users/dev/Metaverse/mim-installer.git/MiM:/home/mitm/MiM"
-
-
 	MIM_PORT=25511
 	[ $SIDE == "up" ] && MIM_PORT=4999
-	
-	# use version 2.2, because 2.4 freaks out under Ubuntu
-	echo 'version: "2.2"' > $OUT
-	echo 'services:' >> $OUT
-	echo '  '$DOCKER_IMAGE':' >> $OUT
-	echo '    image: '$DOCKER_IMAGE >> $OUT
-	echo '    container_name: '$DOCKER_IMAGE >> $OUT
-	echo '    ports:' >> $OUT
-	echo '      - "'$MIM_PORT':'$MIM_PORT'"' >> $OUT
-	echo '    volumes:' >> $OUT
-	echo '      - "'$PWD':/home/mitm/'$DOCKER_MIM_DIR'"' >> $OUT
-	
-	if [[ $ARCH = osx ]]; then
-		MINECRAFT_HOME=`echo ~/Library/Application Support/minecraft`
-	elif [[ $ARCH = linux ]]; then
-		MINECRAFT_HOME=`echo ~/.minecraft`
-	fi
 
+# use version 2.2, because 2.4 freaks out under Ubuntu
+# https://unix.stackexchange.com/questions/77277/how-to-append-multiple-lines-to-a-file
+#----------------
+cat << EOF > $OUT
+version: "2.2"
+networks:
+  local_net:
+    driver: bridge
+services:
+  $DOCKER_IMAGE:
+    image: $DOCKER_IMAGE
+    container_name: $DOCKER_IMAGE
+    networks:
+      - local_net
+    ports:
+      - "$MIM_PORT:$MIM_PORT"
+    volumes:
+      - "$PWD:/home/mitm/$DOCKER_MIM_DIR"
+EOF
+#----------------
+	
 	if [ $SIDE == "down" ]; then
+		if [[ $ARCH = osx ]]; then
+			MINECRAFT_HOME=`echo ~/Library/Application Support/minecraft`
+		elif [[ $ARCH = linux ]]; then
+			MINECRAFT_HOME=`echo ~/.minecraft`
+		fi
+		
 		[[ -d "$MINECRAFT_HOME" ]] || error_msg "Can not find the Minecraft folder at [$MINECRAFT_HOME]"
-		echo '      - "/Users/dev/Library/Application Support/minecraft:/home/mitm/.minecraft"' >> $OUT
+
+		[ -f mim-upstream.properties ] && { mv mim-upstream.properties mim-upstream.properties~; sed 's/^addr=0.0.0.0/addr=local-upstream/' < mim-upstream.properties~ >mim-upstream.properties; }
+
+#----------------
+cat << EOF >> $OUT
+      - "$MINECRAFT_HOME:/home/mitm/.minecraft"
+    command: --addr=0.0.0.0 --landing-addr=doomcraft.cloud.google.com --local-addr=local-upstream
+  local-upstream:
+    image: mim
+    container_name: local-upstream
+    networks:
+      - local_net
+    ports:
+      - "4499:4499"
+    volumes:
+      - "$PWD:/home/mitm/$DOCKER_MIM_DIR"
+    entrypoint: ["./mim-upstream-local.sh"]
+EOF
+#----------------
 	fi
 
 	echo '"services: '$DOCKER_IMAGE': ... " >> ./'$OUT
+exit
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -476,7 +493,7 @@ download_mim()
 		if (( $LOCAL )); then
 			echo "Generating local-upstream properties"
 
-			echo 'addr=127.0.0.1' > $PROPERTIES
+			echo 'addr=0.0.0.0' > $PROPERTIES
 			echo 'port=4499' >> $PROPERTIES
 		fi
 	fi
