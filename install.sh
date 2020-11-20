@@ -184,12 +184,24 @@ docker_build_image()
 docker_cp()
 {
 	if (( ! $CLEAN )); then
-		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename.jar ] && { echo "Extracting runtime to writeable volume :: SKIPPED"; return 0; }
+		[ -f $DOCKER_IMAGE.sh ] && { echo "Extracting runtime to writeable volume :: SKIPPED"; return 0; }
 	fi
 
 	echo '== Extracting runtime to writeable volume ==' 
 	#https://stackoverflow.com/questions/25292198/docker-how-can-i-copy-a-file-from-an-image-to-a-host
-	docker cp $(docker create $DOCKER_IMAGE):/home/mitm/$DOCKER_MIM_DIR ..
+	DOCKER_CONTAINER=`docker create $DOCKER_IMAGE`
+
+	if [ ! -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename.jar ]; then
+		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/forge-$FORGE_VERSION-mdk .
+	fi
+	docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-$SIDE'stream.jar' .
+	docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/$DOCKER_IMAGE.sh .
+	if [ $SIDE == "down" ]; then 
+		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-upstream.jar .
+		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-upstream-local.sh .
+		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-upstream.properties .
+	fi
+
 
 	if [[ $ARCH = linux ]]; then
 		DOCKER_USER_GROUP=docker
