@@ -6,7 +6,7 @@ pause() {
 }
 
 usage() {
-	echo "usage: $0 [-d|--directory DIRECTORY] [--local-upstream] [--clean] [-h|--help]"
+	echo "usage: $0 [-d|--directory DIRECTORY] [--docker] [--local-upstream] [--clean] [-h|--help]"
 }
 
 error_msg() {
@@ -202,7 +202,6 @@ docker_cp()
 		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-upstream.properties .
 	fi
 
-
 	if [[ $ARCH = linux ]]; then
 		DOCKER_USER_GROUP=docker
 
@@ -263,7 +262,7 @@ EOF
 #----------------
 cat << EOF >> $OUT
       - "$MINECRAFT_HOME:/home/mitm/.minecraft"
-    command: --addr=0.0.0.0 --landing-addr=doomcraft.cloud.google.com --local-addr=local-upstream
+    command: --local-addr=local-upstream
   local-upstream:
     image: mim
     container_name: local-upstream
@@ -505,6 +504,7 @@ download_mim()
 		if (( $LOCAL )); then
 			echo 'addr=0.0.0.0' > $PROPERTIES
 			echo 'port=4499' >> $PROPERTIES
+			echo 'aliases=127.0.0.1' >> $PROPERTIES
 		fi
 	fi
 
@@ -577,7 +577,7 @@ generate_run_script()
 
 	# https://stackoverflow.com/questions/20010199/how-to-determine-if-a-process-runs-inside-lxc-docker
 	echo '[ -f mim-'$SIDE'stream.jar ] || { echo "File [mim-'$SIDE'stream.jar] not found."; echo "Abort."; exit 1; }' >> $OUT
-	echo '[ -f docker-compose.yml ] && ! grep -qa docker /proc/1/cgroup 2>/dev/null && { echo "Use [docker-compose] instead."; echo "Abort."; exit 1; }'$'\n' >> $OUT
+	echo '[ -f docker-compose.yml ] && ! grep -qa docker /proc/1/cgroup 2>/dev/null && { echo "Use [\"docker-compose up\"] instead."; echo "Abort."; exit 1; }'$'\n' >> $OUT
 
 	# while [ ! -z "$1" ]; do 
 	#	[ "$1" == "--version" ] && { echo `java -classpath mim-downstream.jar se.mitm.version.Version`; exit 0; }; 
