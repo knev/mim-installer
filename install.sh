@@ -434,7 +434,10 @@ download_forge()
 prep_forge()
 {
 	if (( ! $CLEAN )); then
-		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename.jar ] && { echo "Preparing Minecraft sources :: SKIPPED"; return 0; }
+		#[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename.jar ] && { echo "Preparing Minecraft sources :: SKIPPED"; return 0; }
+
+		# v0.9-9
+		[ -f forge-$FORGE_VERSION-mdk/$FORGE_SNAPSHOT/rename/patch/net/minecraft/util/Timer.class ] && { echo "Preparing Minecraft sources :: SKIPPED"; return 0; }
 	fi
 
 	# -----
@@ -462,6 +465,7 @@ prep_forge()
 		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/text/StringTextComponent.class
 		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/text/TextFormatting.class
 		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/text/TranslationTextComponent.class
+		zip -d $FORGE_SNAPSHOT/rename/output_.jar net/minecraft/util/Timer.class
 	else
 		PATCH_JAR=patch.jar
 		echo == Downloading Minecraft patches ==
