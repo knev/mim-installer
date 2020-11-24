@@ -766,7 +766,7 @@ if (( $DOCKER )); then
 	exit 0
 fi
 
-check_latest_mim_version || error_exit
+(( !$DEV )) && { check_latest_mim_version || error_exit; }
 compile_jzmq_lib || error_exit
 download_forge || error_exit
 prep_forge || error_exit
