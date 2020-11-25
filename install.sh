@@ -555,12 +555,12 @@ generate_run_script()
 	PREFIX=''
 	(( $LOCAL )) && PREFIX='local-'
 	echo "== Generating ["$PREFIX$SIDE"stream] run script =="
-
-	OUT=mim.sh
 		
 	if [ $SIDE == "up" ]; then
 		OUT=mim-upstream.sh
 		(( $LOCAL )) && OUT=mim-upstream-local.sh
+	else
+		OUT=mim-downstream.sh
 	fi
 
 	# -----
@@ -748,8 +748,27 @@ generate_run_script()
 	echo ' $ARGS' >> ./$OUT
 
 	chmod +x ./$OUT
-
 	echo '"java -classpath mim-'$SIDE'stream.jar" >> ./'$OUT
+
+	# -----
+
+	if [ $SIDE == "down" ]; then
+		OUT=mim.sh
+		echo '#!/bin/bash'$'\n' > $OUT
+
+		echo 'while [ ! -z "$1" ]; do [ "$1" == "--upgrade" ] && { curl -f --silent -o install.sh -L https://raw.githubusercontent.com/knev/mim-installer/master/install.sh; /bin/bash install.sh -d .; rm install.sh; exit 0; }; shift; done'$'\n' >> $OUT
+		
+		echo 'trap "exit" INT TERM ERR' >> $OUT
+		echo 'trap "kill 0" EXIT'$'\n' >> $OUT
+
+		echo './mim-downstream.sh &' >> $OUT
+		echo './mim-upstream-local.sh &'$'\n' >> $OUT
+
+		echo 'wait' >> $OUT
+
+		chmod +x ./$OUT
+		echo '"trap; ./mim-(up|down)stream.sh &; wait" >> ./'$OUT
+	fi
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
