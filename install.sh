@@ -773,7 +773,6 @@ generate_run_script()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-check_pre_reqs || error_exit
 
 create_working_directory || error_exit
 cd "$MIM_DIR"/ || error_exit
@@ -785,6 +784,7 @@ if (( $DOCKER )); then
 	exit 0
 fi
 
+check_pre_reqs || error_exit
 (( !$DEV )) && { check_latest_mim_version || error_exit; }
 compile_jzmq_lib || error_exit
 download_forge || error_exit
