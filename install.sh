@@ -184,7 +184,7 @@ docker_build_image()
 docker_cp()
 {
 	if (( ! $CLEAN )); then
-		[ -f $DOCKER_IMAGE.sh ] && { echo "Extracting runtime to writeable volume :: SKIPPED"; return 0; }
+		[ -d forge-$FORGE_VERSION-mdk ] && { echo "Extracting runtime to writeable volume :: SKIPPED"; return 0; }
 	fi
 
 	echo '== Extracting runtime to writeable volume ==' 
