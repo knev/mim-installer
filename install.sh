@@ -195,7 +195,7 @@ docker_cp()
 		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/forge-$FORGE_VERSION-mdk .
 	fi
 	docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-$SIDE'stream.jar' .
-	docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/$DOCKER_IMAGE.sh .
+	docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-$SIDE'stream.sh' .
 	if [ $SIDE == "down" ]; then 
 		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-upstream.jar .
 		docker cp $DOCKER_CONTAINER:/home/mitm/$DOCKER_MIM_DIR/mim-upstream-local.sh .

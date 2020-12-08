@@ -13,5 +13,5 @@ RUN curl -o install.sh -fsSL https://raw.githubusercontent.com/knev/mim-installe
 RUN ./install.sh -d MiM
 
 WORKDIR /home/mitm/MiM
-ENTRYPOINT ["./mim.sh"]
+ENTRYPOINT ["./mim-downstream.sh"]
 
