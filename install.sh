@@ -278,7 +278,6 @@ EOF
 	fi
 
 	echo '"services: '$DOCKER_IMAGE': ... " >> ./'$OUT
-exit
 }
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -537,7 +536,7 @@ download_mim()
 
 #--------------------------------------------------------------------------------------------------------------------------------
 
-generate_run_script() 
+generate_mim_scripts() 
 {
 	if [ $SIDE == "up" ]; then
 		[ -f upstream.sh ] && { mv upstream.sh mim-upstream.sh~ || error_exit; }
@@ -554,7 +553,7 @@ generate_run_script()
 
 	PREFIX=''
 	(( $LOCAL )) && PREFIX='local-'
-	echo "== Generating ["$PREFIX$SIDE"stream] run script =="
+	echo "== Generating ["$PREFIX$SIDE"stream] runtime scripts =="
 		
 	if [ $SIDE == "up" ]; then
 		OUT=mim-upstream.sh
@@ -749,9 +748,10 @@ generate_run_script()
 
 	chmod +x ./$OUT
 	echo '"java -classpath mim-'$SIDE'stream.jar" >> ./'$OUT
+}
 
-	# -----
-
+generate_runtime_script() 
+{
 	if [ $SIDE == "down" ]; then
 		OUT=mim.sh
 		echo '#!/bin/bash'$'\n' > $OUT
@@ -761,13 +761,20 @@ generate_run_script()
 		echo 'trap "exit" INT TERM ERR' >> $OUT
 		echo 'trap "kill 0" EXIT'$'\n' >> $OUT
 
-		echo './mim-downstream.sh &' >> $OUT
-		echo './mim-upstream-local.sh &'$'\n' >> $OUT
+		if (( $DOCKER )); then
+			echo 'docker-compose up' >> $OUT
+
+			echo '"trap; docker-compose up; wait" >> ./'$OUT
+		else
+			echo './mim-downstream.sh &' >> $OUT
+			echo './mim-upstream-local.sh &'$'\n' >> $OUT
+
+			echo '"trap; ./mim-(up|down)stream.sh &; wait" >> ./'$OUT
+		fi
 
 		echo 'wait' >> $OUT
 
 		chmod +x ./$OUT
-		echo '"trap; ./mim-(up|down)stream.sh &; wait" >> ./'$OUT
 	fi
 }
 
@@ -781,6 +788,7 @@ if (( $DOCKER )); then
 	docker_build_image || error_exit
 	docker_cp || error_exit
 	generate_docker_compose || error_exit
+	generate_runtime_script || error_exit
 	exit 0
 fi
 
@@ -791,7 +799,8 @@ download_forge || error_exit
 prep_forge || error_exit
 (( $DEV )) && exit 0
 download_mim || error_exit 
-generate_run_script || error_exit
+generate_mim_scripts || error_exit
+generate_runtime_script || error_exit
 
 if [[ $SIDE = "down" ]]; then
 	LOCAL=1
@@ -799,7 +808,7 @@ if [[ $SIDE = "down" ]]; then
 	SIDE="up"
 
 	download_mim || error_exit 
-	generate_run_script || error_exit
+	generate_mim_scripts || error_exit
 fi
 
 cd ..
