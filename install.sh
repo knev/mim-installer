@@ -172,7 +172,7 @@ docker_build_image()
 	if (( $CLEAN )); then
 		docker rmi -f $DOCKER_IMAGE
 	else
-		docker inspect --type=image $DOCKER_IMAGE >/dev/null && { echo "Building Docker image :: SKIPPED"; return 0; }
+		docker inspect --type=image $DOCKER_IMAGE > /dev/null 2>&1 && { echo "Building Docker image :: SKIPPED"; return 0; }
 	fi
 
 	echo '== Building Docker image =='
