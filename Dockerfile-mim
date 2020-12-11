@@ -10,7 +10,7 @@ USER mitm
 WORKDIR /home/mitm
 
 RUN curl -o install.sh -fsSL https://raw.githubusercontent.com/knev/mim-installer/master/install.sh && chmod +x install.sh 
-RUN ./install.sh -d MiM
+RUN ./install.sh -d MiM --docker-build
 
 WORKDIR /home/mitm/MiM
 ENTRYPOINT ["./mim-downstream.sh"]

@@ -52,6 +52,7 @@ FORGE_SNAPSHOT=gradle.cache/caches/forge_gradle/mcp_repo/de/oceanlabs/mcp/mcp_co
 CLEAN=0
 DEV=0
 DOCKER=0
+DOCKER_BUILD=0
 REQ_VERSION=""
 while [ ! -z "$1" ]; do
 	case $1 in
@@ -74,6 +75,8 @@ while [ ! -z "$1" ]; do
 		--dev )					DEV=1
 								;;
 		--docker )				DOCKER=1
+								;;
+		--docker-build )		DOCKER_BUILD=1
 								;;
 		--req-version )			shift
 								REQ_VERSION=$1
@@ -586,6 +589,7 @@ generate_mim_scripts()
 	#
 	if [ $SIDE == "up" ]; then
 		SWITCH="--upstream"
+		(( $DOCKER_BUILD )) && SWITCH="${SWITCH} --docker"
 	fi
 	echo -n 'while [ ! -z "$1" ]; do [ "$1" == "--version" ] && { echo `java -classpath mim-'$SIDE'stream.jar se.mitm.version.Version`; exit 0; }; ' >> $OUT
 	if [ $SIDE != "down" ] && (( ! $LOCAL )); then
@@ -596,7 +600,7 @@ generate_mim_scripts()
 
 	# https://stackoverflow.com/questions/20010199/how-to-determine-if-a-process-runs-inside-lxc-docker
 	# grep -qa docker /proc/1/cgroup 2>/dev/null || { echo "Use [docker-compose] instead."; echo "Abort."; exit 1; }
-	echo '[ -f docker-compose.yml ] && ! grep -qa docker /proc/1/cgroup 2>/dev/null && { echo "Use [\"docker-compose up\"] instead."; echo "Abort."; exit 1; }'$'\n' >> $OUT
+	(( $DOCKER_BUILD )) && echo '[ -f docker-compose.yml ] && ! grep -qa docker /proc/1/cgroup 2>/dev/null && { echo "Use [\"docker-compose up\"] instead."; echo "Abort."; exit 1; }'$'\n' >> $OUT
 	
 	# INST=( `java -classpath mim-downstream.jar se.mitm.version.Version 2>&1 | grep -m1 "Man in the Middle of Minecraft (MiM)" | sed 's/Man in the Middle of Minecraft (MiM): \(.*\)$/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
 	# NET=( `curl -sfL https://mitm.se/mim-install/Version-mim-downstream.java | grep -m1 commit | sed 's/.*commit=[ ]*\"\([^"]*\)\";/\1/' | sed 's/^v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\)-.*$/\1 \2 \3/'` )
@@ -803,7 +807,7 @@ if (( $DOCKER )); then
 fi
 
 check_pre_reqs || error_exit
-(( !$DEV )) && { check_latest_mim_version || error_exit; }
+(( ! $DEV )) && { check_latest_mim_version || error_exit; }
 compile_jzmq_lib || error_exit
 download_forge || error_exit
 prep_forge || error_exit
