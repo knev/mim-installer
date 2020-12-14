@@ -570,7 +570,9 @@ generate_mim_scripts()
 	[ -f $OUT ] && { mv $OUT $OUT'~' || return 1; }
 	# https://stackoverflow.com/questions/8467424/echo-newline-in-bash-prints-literal-n
 	echo '#!/bin/bash' > $OUT
-	echo 'ARGS=$@'$'\n' >> $OUT
+	echo 'ARGS=$@' >> $OUT
+	# set the umask for *nix systems; under macOS the user isn't required to be in the docker group
+	echo 'umask 002'$'\n' >> $OUT
 
 	#
 	# basically don't have to have to escape anything except for single quotes, which can not occur inside single quotes
