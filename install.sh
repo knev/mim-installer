@@ -242,6 +242,7 @@ services:
   $DOCKER_IMAGE:
     image: $DOCKER_IMAGE
     container_name: $DOCKER_IMAGE
+    restart: unless-stopped
     networks:
       - local_net
     ports:
@@ -269,6 +270,7 @@ cat << EOF >> $OUT
   local-upstream:
     image: mim
     container_name: local-upstream
+    restart: unless-stopped
     networks:
       - local_net
     ports:
